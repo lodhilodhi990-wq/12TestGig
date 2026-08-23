@@ -94,15 +94,35 @@ export default function EarnerWallet() {
                 Your available balance is <strong>45,000 🪙</strong>. Enter the amount of Coins you wish to convert and withdraw to your linked bank account.
               </p>
               
-              <div className="mb-2 relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-medium">🪙</span>
-                <input 
-                  type="number" 
-                  placeholder="5000" 
-                  className="w-full pl-10 pr-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-1">Select Withdrawal Method</label>
+                  <select className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none text-zinc-900 font-medium">
+                    <option value="easypaisa">Easypaisa</option>
+                    <option value="jazzcash">JazzCash</option>
+                    <option value="bank">Bank Transfer (PKR)</option>
+                    <option value="payoneer">Payoneer (USD)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-1">Account Details</label>
+                  <input type="text" placeholder="e.g. 0300-1234567 or IBAN" className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-1">Amount to Withdraw (in Coins)</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-medium">🪙</span>
+                    <input 
+                      type="number" 
+                      placeholder="5000" 
+                      className="w-full pl-10 pr-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <p className="text-xs text-emerald-600 font-medium mt-2 text-right">You will receive approx: $50.00 USD</p>
+                </div>
               </div>
-              <p className="text-xs text-emerald-600 font-medium mb-6 text-right">You will receive approx: $50.00 USD</p>
 
               <div className="flex gap-3">
                 <button 
@@ -113,7 +133,7 @@ export default function EarnerWallet() {
                 </button>
                 <button 
                   onClick={() => {
-                    alert('Withdrawal requested! It may take 2-3 business days to process.');
+                    alert('Withdrawal requested via selected method! It may take 2-3 business days to process.');
                     setShowWithdraw(false);
                   }}
                   className="flex-1 px-4 py-2.5 bg-zinc-900 hover:bg-black text-white font-medium rounded-xl transition-colors"

@@ -60,6 +60,41 @@ export default function Settings() {
             </label>
           </div>
         </div>
+        <div className="bg-saas-card rounded-xl border border-saas-border overflow-hidden lg:col-span-2">
+          <div className="p-6 border-b border-saas-border">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <span className="text-xl">🪙</span> Financial & Coin Settings
+            </h2>
+          </div>
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-4">
+              <h3 className="font-medium text-white mb-2">Coin Pricing (Exchange Rate)</h3>
+              <div>
+                <label className="block text-sm font-medium text-saas-text-muted mb-2">1 USD equals how many Coins?</label>
+                <input type="number" defaultValue={100} className="w-full bg-saas-dark border border-saas-border rounded-lg px-4 py-2 text-white focus:outline-none focus:border-saas-accent" />
+                <p className="text-xs text-saas-text-muted mt-2">Current Rate: $1.00 USD = 100 🪙</p>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <h3 className="font-medium text-white mb-2">Admin Receiving Accounts</h3>
+              <p className="text-xs text-saas-text-muted mb-4">Customers will see these details when they want to buy Coins.</p>
+              
+              <div>
+                <label className="block text-sm font-medium text-saas-text-muted mb-2">Local Bank (PKR)</label>
+                <input type="text" defaultValue="Meezan Bank, Acc: 123456789 (Umar Hayat)" className="w-full bg-saas-dark border border-saas-border rounded-lg px-4 py-2 text-white focus:outline-none focus:border-saas-accent text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-saas-text-muted mb-2">Easypaisa / JazzCash</label>
+                <input type="text" defaultValue="0300-1234567" className="w-full bg-saas-dark border border-saas-border rounded-lg px-4 py-2 text-white focus:outline-none focus:border-saas-accent text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-saas-text-muted mb-2">Payoneer / USDT (Binance Pay)</label>
+                <input type="text" defaultValue="pay@12testgig.com" className="w-full bg-saas-dark border border-saas-border rounded-lg px-4 py-2 text-white focus:outline-none focus:border-saas-accent text-sm" />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
