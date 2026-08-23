@@ -1,76 +1,81 @@
-import React from 'react';
-import { formatMoney } from '@/lib/formatters';
+'use client';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import TesterLayout from '@/components/TesterLayout';
+import { Wallet, ArrowUpRight, ArrowDownRight, Clock, Building } from 'lucide-react';
 
-export default function TesterWalletPage() {
-  // Mock data for UI placeholder
-  const wallet = {
-    availableBalanceMinor: 4500,
-    pendingBalanceMinor: 1000,
-    lifetimeEarnedMinor: 8000,
-    lifetimeWithdrawnMinor: 2500,
-  };
-
+export default function TesterWallet() {
   const transactions = [
-    { id: '1', type: 'Campaign Completion', amountMinor: 1000, date: '2023-10-01' },
-    { id: '2', type: 'Bug Reward', amountMinor: 200, date: '2023-10-02' },
+    { id: 1, type: 'credit', amount: '+$15.00', desc: 'Reward: Fitness Tracker Pro', date: 'Today, 2:30 PM', status: 'Completed' },
+    { id: 2, type: 'withdrawal', amount: '-$50.00', desc: 'Withdrawal to Bank ****1234', date: 'Oct 20, 2023', status: 'Processing' },
+    { id: 3, type: 'credit', amount: '+$12.00', desc: 'Reward: Meditation App', date: 'Oct 15, 2023', status: 'Completed' },
   ];
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">My Wallet</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="p-4 bg-white rounded-lg shadow border">
-          <h2 className="text-sm text-gray-500 mb-1">Available Balance</h2>
-          <p className="text-2xl font-bold text-green-600">{formatMoney(wallet.availableBalanceMinor)}</p>
-        </div>
-        <div className="p-4 bg-white rounded-lg shadow border">
-          <h2 className="text-sm text-gray-500 mb-1">Pending Balance</h2>
-          <p className="text-2xl font-bold text-orange-500">{formatMoney(wallet.pendingBalanceMinor)}</p>
-        </div>
-        <div className="p-4 bg-white rounded-lg shadow border">
-          <h2 className="text-sm text-gray-500 mb-1">Lifetime Earned</h2>
-          <p className="text-2xl font-bold">{formatMoney(wallet.lifetimeEarnedMinor)}</p>
-        </div>
-        <div className="p-4 bg-white rounded-lg shadow border">
-          <h2 className="text-sm text-gray-500 mb-1">Lifetime Withdrawn</h2>
-          <p className="text-2xl font-bold">{formatMoney(wallet.lifetimeWithdrawnMinor)}</p>
-        </div>
-      </div>
+    <ProtectedRoute allowedRoles={['tester']}>
+      <TesterLayout>
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold text-zinc-900">Wallet</h1>
+            <p className="text-zinc-500 mt-1">Manage your earnings and withdraw funds.</p>
+          </div>
 
-      <div className="mb-8">
-        <button 
-          disabled
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-        >
-          Withdraw Funds
-        </button>
-        <p className="text-sm text-gray-500 mt-2">Withdrawals will be enabled once payment integration is complete.</p>
-      </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Balance Card */}
+            <div className="md:col-span-2 bg-zinc-950 text-white p-8 rounded-2xl relative overflow-hidden shadow-lg">
+              <div className="absolute top-0 right-0 p-8 opacity-10">
+                <Wallet className="w-32 h-32" />
+              </div>
+              <div className="relative z-10">
+                <p className="text-zinc-400 font-medium">Available Balance</p>
+                <h2 className="text-5xl font-bold mt-2">$120.00</h2>
+                <div className="mt-8 flex gap-4">
+                  <button className="px-6 py-3 bg-white text-black font-semibold rounded-xl hover:bg-zinc-200 transition-colors flex items-center gap-2">
+                    Withdraw Funds <ArrowUpRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
 
-      <h2 className="text-xl font-bold mb-4">Recent Transactions</h2>
-      <div className="bg-white rounded-lg shadow border overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {transactions.map(tx => (
-              <tr key={tx.id}>
-                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{tx.date}</td>
-                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{tx.type}</td>
-                <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                  +{formatMoney(tx.amountMinor)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+            {/* Escrow/Pending */}
+            <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm flex flex-col justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center mb-4">
+                  <Clock className="w-5 h-5 text-amber-500" />
+                </div>
+                <h3 className="text-zinc-500 font-medium">Pending in Escrow</h3>
+                <p className="text-3xl font-bold text-zinc-900 mt-1">$35.00</p>
+              </div>
+              <p className="text-sm text-zinc-500 mt-4">Funds from active tests will be available upon completion.</p>
+            </div>
+          </div>
+
+          {/* Transaction History */}
+          <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-zinc-100">
+              <h2 className="text-lg font-bold text-zinc-900">Transaction History</h2>
+            </div>
+            <div className="divide-y divide-zinc-100">
+              {transactions.map(tx => (
+                <div key={tx.id} className="p-6 flex items-center justify-between hover:bg-zinc-50 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${tx.type === 'credit' ? 'bg-emerald-50 text-emerald-600' : 'bg-zinc-100 text-zinc-600'}`}>
+                      {tx.type === 'credit' ? <ArrowDownRight className="w-5 h-5" /> : <Building className="w-5 h-5" />}
+                    </div>
+                    <div>
+                      <p className="font-bold text-zinc-900">{tx.desc}</p>
+                      <p className="text-sm text-zinc-500">{tx.date}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`font-bold ${tx.type === 'credit' ? 'text-emerald-600' : 'text-zinc-900'}`}>{tx.amount}</p>
+                    <p className="text-xs text-zinc-500 mt-1">{tx.status}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </TesterLayout>
+    </ProtectedRoute>
   );
 }
