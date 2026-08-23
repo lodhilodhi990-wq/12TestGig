@@ -1,7 +1,17 @@
 @import "tailwindcss";
 
+@theme {
+  --color-saas-bg: #020617;
+  --color-saas-dark: #0f172a;
+  --color-saas-card: #1e293b;
+  --color-saas-accent: #3b82f6;
+  --color-saas-text: #f8fafc;
+  --color-saas-text-muted: #94a3b8;
+  --color-saas-border: #334155;
+}
+
 @layer base {
   body {
-    @apply bg-saas-dark text-saas-text font-sans antialiased;
+    @apply bg-saas-bg text-saas-text font-sans antialiased;
   }
 }
