@@ -1,0 +1,43 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    match /profiles/{userId}/{fileName} {
+      allow read: if isAuthenticated();
+      // Max 5MB, images only
+      allow write: if isOwner(userId) 
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    match /app-icons/{orgId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() 
+                   && request.resource.size < 2 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    match /bug-evidence/{sessionId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() 
+                   && request.resource.size < 20 * 1024 * 1024;
+    }
+    
+    match /reports/{reportId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only server writes reports
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
