@@ -46,7 +46,7 @@ export default function Settings() {
             <label className="flex items-center justify-between">
               <div>
                 <p className="font-medium text-white">Auto-approve Quality Testers</p>
-                <p className="text-sm text-saas-text-muted">Automatically approve testers with a score > 4.5 for campaigns.</p>
+                <p className="text-sm text-saas-text-muted">Automatically approve testers with a score &gt; 4.5 for campaigns.</p>
               </div>
               <input type="checkbox" defaultChecked className="w-5 h-5 rounded border-saas-border bg-saas-dark text-saas-accent focus:ring-saas-accent focus:ring-offset-saas-dark" />
             </label>
