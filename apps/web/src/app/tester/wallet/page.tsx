@@ -2,8 +2,11 @@
 import ProtectedRoute from '@/components/ProtectedRoute';
 import TesterLayout from '@/components/TesterLayout';
 import { Wallet, ArrowUpRight, ArrowDownRight, Clock, Building } from 'lucide-react';
+import { useState } from 'react';
 
 export default function TesterWallet() {
+  const [showWithdraw, setShowWithdraw] = useState(false);
+
   const transactions = [
     { id: 1, type: 'credit', amount: '+$15.00', desc: 'Reward: Fitness Tracker Pro', date: 'Today, 2:30 PM', status: 'Completed' },
     { id: 2, type: 'withdrawal', amount: '-$50.00', desc: 'Withdrawal to Bank ****1234', date: 'Oct 20, 2023', status: 'Processing' },
@@ -29,7 +32,10 @@ export default function TesterWallet() {
                 <p className="text-zinc-400 font-medium">Available Balance</p>
                 <h2 className="text-5xl font-bold mt-2">$120.00</h2>
                 <div className="mt-8 flex gap-4">
-                  <button className="px-6 py-3 bg-white text-black font-semibold rounded-xl hover:bg-zinc-200 transition-colors flex items-center gap-2">
+                  <button 
+                    onClick={() => setShowWithdraw(true)}
+                    className="px-6 py-3 bg-white text-black font-semibold rounded-xl hover:bg-zinc-200 transition-colors flex items-center gap-2"
+                  >
                     Withdraw Funds <ArrowUpRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -75,6 +81,45 @@ export default function TesterWallet() {
             </div>
           </div>
         </div>
+
+        {/* Withdraw Modal */}
+        {showWithdraw && (
+          <div className="fixed inset-0 bg-zinc-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
+              <h3 className="text-xl font-bold text-zinc-900 mb-2">Withdraw Funds</h3>
+              <p className="text-zinc-500 mb-6">
+                Your available balance is $120.00. Enter the amount you wish to withdraw to your linked bank account.
+              </p>
+              
+              <div className="mb-6 relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-medium">$</span>
+                <input 
+                  type="number" 
+                  placeholder="0.00" 
+                  className="w-full pl-8 pr-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setShowWithdraw(false)}
+                  className="flex-1 px-4 py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-medium rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => {
+                    alert('Withdrawal requested! It may take 2-3 business days to process.');
+                    setShowWithdraw(false);
+                  }}
+                  className="flex-1 px-4 py-2.5 bg-zinc-900 hover:bg-black text-white font-medium rounded-xl transition-colors"
+                >
+                  Confirm Withdraw
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </TesterLayout>
     </ProtectedRoute>
   );

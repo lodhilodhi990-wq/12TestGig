@@ -6,6 +6,7 @@ import { useState } from 'react';
 
 export default function MyTests() {
   const [activeTab, setActiveTab] = useState('active');
+  const [selectedTask, setSelectedTask] = useState<number | null>(null);
 
   const activeTests = [
     { id: 1, name: 'Fitness Tracker Pro', daysLeft: 4, status: 'In Progress', reward: '$15', completedTasks: 9, totalTasks: 14 },
@@ -15,6 +16,10 @@ export default function MyTests() {
   const completedTests = [
     { id: 3, name: 'Meditation App', date: '2023-10-15', reward: '$12', status: 'Paid' },
   ];
+
+  const handleStartTask = (id: number) => {
+    setSelectedTask(id);
+  };
 
   return (
     <ProtectedRoute allowedRoles={['tester']}>
@@ -57,7 +62,10 @@ export default function MyTests() {
                         <span className="text-zinc-500">{test.daysLeft} days remaining</span>
                       </div>
                     </div>
-                    <button className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg flex items-center justify-center gap-2 transition-colors">
+                    <button 
+                      onClick={() => handleStartTask(test.id)}
+                      className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg flex items-center justify-center gap-2 transition-colors"
+                    >
                       <Play className="w-4 h-4" /> Start Daily Task
                     </button>
                   </div>
@@ -108,6 +116,38 @@ export default function MyTests() {
           )}
 
         </div>
+
+        {/* Task Modal */}
+        {selectedTask && (
+          <div className="fixed inset-0 bg-zinc-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
+              <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-4 mx-auto">
+                <Play className="w-6 h-6 ml-1" />
+              </div>
+              <h3 className="text-xl font-bold text-center text-zinc-900 mb-2">Ready to Start?</h3>
+              <p className="text-center text-zinc-500 mb-6">
+                Please ensure you keep the app open for at least 3 minutes to register your daily activity. Our system will track it automatically.
+              </p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setSelectedTask(null)}
+                  className="flex-1 px-4 py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-medium rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => {
+                    alert('Task started! Tracking initiated.');
+                    setSelectedTask(null);
+                  }}
+                  className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors"
+                >
+                  Open App
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </TesterLayout>
     </ProtectedRoute>
   );
