@@ -226,7 +226,7 @@ service cloud.firestore {
       allow write: if false; // Handled by backend action
     }
     match /feature_flags/{flagId} {
-      allow read: true; // Publicly readable for Maintenance Mode UI checks
+      allow read: if true; // Publicly readable for Maintenance Mode UI checks
       allow write: if false; // Handled by backend action
     }
     match /releases/{releaseId} {

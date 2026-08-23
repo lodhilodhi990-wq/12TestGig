@@ -10,9 +10,12 @@
   "scripts": {
     "dev": "npm run dev --workspaces",
     "build": "npm run build --workspaces",
-    "test": "npm run test --workspaces"
+    "test": "npm run test --workspaces",
+    "deploy:saas": "npm run build --workspace=saas-panel && npx firebase-tools deploy --only hosting"
   },
   "dependencies": {
-    "firebase": "^12.18.0"
+    "firebase": "^12.18.0",
+    "lucide-react": "^1.33.0",
+    "react-router-dom": "^7.18.2"
   }
 }
