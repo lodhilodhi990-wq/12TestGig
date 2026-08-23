@@ -1,18 +1,18 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import CustomerLayout from '@/components/CustomerLayout';
 import { 
   Rocket, 
   Clock, 
   CheckCircle2, 
-  Coins, 
   Users, 
   Plus, 
-  Sparkles, 
   Download, 
   ExternalLink,
-  ShieldCheck
+  ShieldCheck,
+  Sparkles,
+  Trash2
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -21,12 +21,13 @@ interface Campaign {
   name: string;
   package: string;
   icon: string;
-  status: 'Active' | 'Completed' | 'Pending';
+  status: 'Active' | 'Completed' | 'Pending' | string;
   testers: string;
   spent: string;
   budget: string;
   daysPassed: number;
   totalDays: number;
+  playStoreUrl?: string;
 }
 
 export default function CustomerCampaigns() {
@@ -36,46 +37,29 @@ export default function CustomerCampaigns() {
   const [fetchedData, setFetchedData] = useState<any>(null);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
 
-  const [campaigns, setCampaigns] = useState<Campaign[]>([
-    { 
-      id: 1, 
-      name: 'Fitness Tracker Pro', 
-      package: 'com.fitnesstracker.pro',
-      icon: '🏋️',
-      status: 'Active', 
-      testers: '20/20 Testers Active', 
-      spent: '1,200 Coins', 
-      budget: '2,000 Coins', 
-      daysPassed: 10,
-      totalDays: 14 
-    },
-    { 
-      id: 2, 
-      name: 'Language Learner AI', 
-      package: 'com.ai.languagelearner',
-      icon: '🌐',
-      status: 'Active', 
-      testers: '18/20 Testers Active', 
-      spent: '800 Coins', 
-      budget: '2,500 Coins', 
-      daysPassed: 4,
-      totalDays: 14 
-    },
-    { 
-      id: 3, 
-      name: 'Budget Hero Finance', 
-      package: 'com.budgethero.app',
-      icon: '💰',
-      status: 'Completed', 
-      testers: '20/20 Testers Verified', 
-      spent: '2,000 Coins', 
-      budget: '2,000 Coins', 
-      daysPassed: 14,
-      totalDays: 14 
-    },
-  ]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
 
-  const handleUrlChange = (url: string) => {
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('user_apps_campaigns');
+      if (saved) {
+        setCampaigns(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  const saveCampaigns = (newCamps: Campaign[]) => {
+    setCampaigns(newCamps);
+    try {
+      localStorage.setItem('user_apps_campaigns', JSON.stringify(newCamps));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleUrlChange = async (url: string) => {
     setPlayStoreUrl(url);
     if (!url.trim()) {
       setFetchedData(null);
@@ -84,23 +68,30 @@ export default function CustomerCampaigns() {
 
     let pkg = url.trim();
     if (pkg.includes('id=')) pkg = pkg.split('id=')[1].split('&')[0];
-    else if (pkg.includes('/')) pkg = pkg.split('/').pop() || pkg;
+    else if (pkg.includes('/') && !pkg.startsWith('http')) pkg = pkg.split('/').pop() || pkg;
 
-    if (pkg.length > 3) {
+    if (pkg.length >= 3) {
       setIsFetching(true);
-      setTimeout(() => {
-        const nameParts = pkg.replace('com.', '').replace('app.', '').split('.');
-        const readableName = nameParts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
-        setFetchedData({
-          name: readableName || 'My Android Application',
-          package: pkg,
-          icon: '📱',
-          testers: 20,
-          days: 14,
-          costCoins: 2000
-        });
+      try {
+        const res = await fetch(`/api/play-store/metadata?url=${encodeURIComponent(url.trim())}`);
+        const data = await res.json();
+        if (data.success) {
+          setFetchedData({
+            name: data.name,
+            package: data.packageId,
+            icon: data.icon,
+            category: data.category || 'Tools',
+            testers: 20,
+            days: 14,
+            costCoins: 2000,
+            playStoreUrl: data.playStoreUrl || url
+          });
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
         setIsFetching(false);
-      }, 400);
+      }
     }
   };
 
@@ -117,14 +108,16 @@ export default function CustomerCampaigns() {
       spent: '0 Coins',
       budget: `${fetchedData.costCoins.toLocaleString()} Coins`,
       daysPassed: 1,
-      totalDays: 14
+      totalDays: 14,
+      playStoreUrl: fetchedData.playStoreUrl
     };
 
-    setCampaigns([newCamp, ...campaigns]);
+    const updated = [newCamp, ...campaigns];
+    saveCampaigns(updated);
     setShowLaunchModal(false);
     setPlayStoreUrl('');
     setFetchedData(null);
-    alert(`🚀 Campaign for ${newCamp.name} launched! 20 certified testers assigned.`);
+    alert(`🚀 Campaign for "${newCamp.name}" launched with real Google Play logo! 20 certified testers assigned.`);
   };
 
   return (
@@ -150,100 +143,130 @@ export default function CustomerCampaigns() {
             </button>
           </div>
 
-          {/* Table */}
-          <div className="bg-white rounded-3xl border border-zinc-200 shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-zinc-100 flex items-center justify-between">
-              <h2 className="text-base font-bold text-zinc-900">Your Active & Completed Campaigns</h2>
-              <span className="text-xs text-zinc-400 font-medium">Standard: 20 testers • 14 days</span>
+          {/* Clean State: If No Campaigns */}
+          {campaigns.length === 0 ? (
+            <div className="bg-white rounded-3xl border-2 border-dashed border-zinc-200 p-12 text-center flex flex-col items-center justify-center min-h-[300px]">
+              <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
+                <Rocket className="w-8 h-8" />
+              </div>
+              <h2 className="text-lg font-black text-zinc-900">No Active Campaigns</h2>
+              <p className="text-xs text-zinc-500 mt-1.5 max-w-sm">
+                Paste your Google Play closed test link to launch a 14-day campaign with 20 real testers.
+              </p>
+              <button 
+                onClick={() => setShowLaunchModal(true)}
+                className="mt-6 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition shadow-md flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" /> Launch Your First Campaign
+              </button>
             </div>
+          ) : (
+            <div className="bg-white rounded-3xl border border-zinc-200 shadow-sm overflow-hidden">
+              <div className="p-6 border-b border-zinc-100 flex items-center justify-between">
+                <h2 className="text-base font-bold text-zinc-900">Your Active & Completed Campaigns</h2>
+                <span className="text-xs text-zinc-400 font-medium">Standard: 20 testers • 14 continuous days</span>
+              </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 font-semibold uppercase tracking-wider text-[10px]">
-                  <tr>
-                    <th className="p-4">App & Package Name</th>
-                    <th className="p-4">Spent Coins</th>
-                    <th className="p-4">Budget</th>
-                    <th className="p-4">Tester Capacity</th>
-                    <th className="p-4">14-Day Progress</th>
-                    <th className="p-4">Status</th>
-                    <th className="p-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-100">
-                  {campaigns.map(camp => (
-                    <tr key={camp.id} className="hover:bg-zinc-50/50 transition">
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-zinc-100 border border-zinc-200 flex items-center justify-center text-xl shadow-sm">
-                            {camp.icon}
-                          </div>
-                          <div>
-                            <p className="font-bold text-sm text-zinc-900">{camp.name}</p>
-                            <p className="text-[10px] text-zinc-500 font-mono">{camp.package}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-4 font-bold text-emerald-600">{camp.spent}</td>
-                      <td className="p-4 text-zinc-500 font-medium">{camp.budget}</td>
-                      <td className="p-4 font-bold text-zinc-900">{camp.testers}</td>
-                      <td className="p-4">
-                        <div className="w-32">
-                          <div className="flex justify-between text-[10px] text-zinc-500 mb-1 font-semibold">
-                            <span>Day {camp.daysPassed} / {camp.totalDays}</span>
-                            <span>{camp.totalDays - camp.daysPassed}d left</span>
-                          </div>
-                          <div className="w-full bg-zinc-100 rounded-full h-1.5 overflow-hidden">
-                            <div 
-                              className="bg-blue-600 h-1.5 rounded-full" 
-                              style={{ width: `${(camp.daysPassed / camp.totalDays) * 100}%` }}
-                            />
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                          camp.status === 'Active' ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'
-                        }`}>
-                          {camp.status === 'Active' ? <Clock className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                          {camp.status}
-                        </span>
-                      </td>
-                      <td className="p-4 text-right">
-                        <button 
-                          onClick={() => setSelectedCampaign(camp)}
-                          className="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-bold rounded-xl text-xs transition"
-                        >
-                          View Logs
-                        </button>
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 font-semibold uppercase tracking-wider text-[10px]">
+                    <tr>
+                      <th className="p-4">App & Package Name</th>
+                      <th className="p-4">Spent Coins</th>
+                      <th className="p-4">Budget</th>
+                      <th className="p-4">Tester Capacity</th>
+                      <th className="p-4">14-Day Progress</th>
+                      <th className="p-4">Status</th>
+                      <th className="p-4 text-right">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100">
+                    {campaigns.map(camp => (
+                      <tr key={camp.id} className="hover:bg-zinc-50/50 transition">
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-zinc-100 border border-zinc-200 overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
+                              {camp.icon?.startsWith('http') ? (
+                                <img src={camp.icon} alt={camp.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="text-xl">{camp.icon || '📱'}</span>
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-bold text-sm text-zinc-900">{camp.name}</p>
+                              <p className="text-[10px] text-zinc-500 font-mono">{camp.package}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4 font-bold text-emerald-600">{camp.spent}</td>
+                        <td className="p-4 text-zinc-500 font-medium">{camp.budget}</td>
+                        <td className="p-4 font-bold text-zinc-900">{camp.testers}</td>
+                        <td className="p-4">
+                          <div className="w-32">
+                            <div className="flex justify-between text-[10px] text-zinc-500 mb-1 font-semibold">
+                              <span>Day {camp.daysPassed} / {camp.totalDays}</span>
+                              <span>{camp.totalDays - camp.daysPassed}d left</span>
+                            </div>
+                            <div className="w-full bg-zinc-100 rounded-full h-1.5 overflow-hidden">
+                              <div 
+                                className="bg-blue-600 h-1.5 rounded-full" 
+                                style={{ width: `${(camp.daysPassed / camp.totalDays) * 100}%` }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                            camp.status === 'Active' ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'
+                          }`}>
+                            {camp.status === 'Active' ? <Clock className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                            {camp.status}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right">
+                          <button 
+                            onClick={() => setSelectedCampaign(camp)}
+                            className="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-bold rounded-xl text-xs transition"
+                          >
+                            View Logs
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Launch Modal */}
+          {/* Launch Modal with Real Logo Fetcher */}
           {showLaunchModal && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 md:p-8 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-black text-zinc-900">Launch New Play Store Campaign</h3>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black text-zinc-900">Launch Closed Test Campaign</h3>
+                      <p className="text-xs text-zinc-500">Auto-fetches real Play Store app logo & details</p>
+                    </div>
+                  </div>
                   <button onClick={() => setShowLaunchModal(false)} className="text-zinc-400 hover:text-zinc-600 text-lg font-bold">✕</button>
                 </div>
 
                 <div className="space-y-4 mb-6">
                   <div>
                     <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1.5">
-                      Google Play Store Link or Package ID
+                      Google Play Store URL or Package ID
                     </label>
                     <div className="relative">
                       <input 
                         type="text" 
                         value={playStoreUrl}
                         onChange={(e) => handleUrlChange(e.target.value)}
-                        placeholder="https://play.google.com/store/apps/details?id=com.myfitness.app" 
+                        placeholder="https://play.google.com/store/apps/details?id=com.spotify.music" 
                         className="w-full bg-zinc-50 border border-zinc-300 rounded-2xl px-4 py-3 text-xs md:text-sm focus:ring-2 focus:ring-blue-500 outline-none pr-10 font-mono"
                       />
                       {isFetching && (
@@ -257,12 +280,19 @@ export default function CustomerCampaigns() {
                   {fetchedData && (
                     <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 animate-in fade-in duration-200">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-white border border-zinc-200 flex items-center justify-center text-2xl shadow-sm">
-                          {fetchedData.icon}
+                        <div className="w-14 h-14 rounded-xl bg-white border border-zinc-200 overflow-hidden flex items-center justify-center shadow-sm shrink-0">
+                          {fetchedData.icon?.startsWith('http') ? (
+                            <img src={fetchedData.icon} alt={fetchedData.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-2xl">📱</span>
+                          )}
                         </div>
                         <div>
                           <h4 className="font-bold text-sm text-zinc-900">{fetchedData.name}</h4>
                           <p className="text-xs text-zinc-500 font-mono">{fetchedData.package}</p>
+                          <span className="inline-block mt-0.5 px-2 py-0.5 bg-white text-[10px] font-bold text-indigo-700 rounded-full border border-indigo-100">
+                            {fetchedData.category}
+                          </span>
                         </div>
                       </div>
                       <div className="mt-3 pt-3 border-t border-indigo-200 flex justify-between text-xs font-bold">
@@ -297,9 +327,18 @@ export default function CustomerCampaigns() {
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 md:p-8 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200">
                 <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-black text-zinc-900">{selectedCampaign.name}</h3>
-                    <p className="text-xs text-zinc-500 font-mono">{selectedCampaign.package}</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-zinc-100 border border-zinc-200 overflow-hidden flex items-center justify-center shrink-0">
+                      {selectedCampaign.icon?.startsWith('http') ? (
+                        <img src={selectedCampaign.icon} alt={selectedCampaign.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-2xl">📱</span>
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="text-base font-black text-zinc-900">{selectedCampaign.name}</h3>
+                      <p className="text-xs text-zinc-500 font-mono">{selectedCampaign.package}</p>
+                    </div>
                   </div>
                   <button onClick={() => setSelectedCampaign(null)} className="text-zinc-400 hover:text-zinc-600 text-lg font-bold">✕</button>
                 </div>
@@ -318,8 +357,8 @@ export default function CustomerCampaigns() {
                     <span className="font-bold text-zinc-900">Day {selectedCampaign.daysPassed} of {selectedCampaign.totalDays}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-zinc-500">Budget Spent:</span>
-                    <span className="font-bold text-emerald-600">{selectedCampaign.spent}</span>
+                    <span className="text-zinc-500">Budget:</span>
+                    <span className="font-bold text-emerald-600">{selectedCampaign.budget}</span>
                   </div>
                 </div>
 
