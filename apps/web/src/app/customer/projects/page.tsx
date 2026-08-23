@@ -48,7 +48,7 @@ export default function CustomerProjects() {
       status: 'Active (14-Day Test)', 
       testers: '20/20 Testers Active',
       daysRemaining: 4,
-      budgetCoins: '2,000 🪙',
+      budgetCoins: '2,000 Coins',
       description: 'Daily workout planner and heart rate tracking app.'
     },
     { 
@@ -60,7 +60,7 @@ export default function CustomerProjects() {
       status: 'Active (14-Day Test)', 
       testers: '18/20 Testers Active',
       daysRemaining: 11,
-      budgetCoins: '2,500 🪙',
+      budgetCoins: '2,500 Coins',
       description: 'Multi-chain decentralized cryptocurrency wallet.'
     },
   ]);

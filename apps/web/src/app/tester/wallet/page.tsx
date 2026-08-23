@@ -8,13 +8,13 @@ export default function TesterWallet() {
   const [showWithdraw, setShowWithdraw] = useState(false);
 
   const transactions = [
-    { id: 1, type: 'credit', amount: '+1,500 🪙', desc: 'Reward: Fitness Tracker Pro', date: 'Today, 2:30 PM', status: 'Completed' },
-    { id: 2, type: 'withdrawal', amount: '-5,000 🪙', desc: 'Withdrawal to Bank ****1234 ($50.00)', date: 'Oct 20, 2023', status: 'Processing' },
-    { id: 3, type: 'credit', amount: '+1,200 🪙', desc: 'Reward: Meditation App', date: 'Oct 15, 2023', status: 'Completed' },
+    { id: 1, type: 'credit', amount: '+1,500 Coins', desc: 'Reward: Fitness Tracker Pro', date: 'Today, 2:30 PM', status: 'Completed' },
+    { id: 2, type: 'withdrawal', amount: '-5,000 Coins', desc: 'Withdrawal to Bank ****1234 ($50.00)', date: 'Oct 20, 2023', status: 'Processing' },
+    { id: 3, type: 'credit', amount: '+1,200 Coins', desc: 'Reward: Meditation App', date: 'Oct 15, 2023', status: 'Completed' },
   ];
 
   return (
-    <ProtectedRoute allowedRoles={['tester']}>
+    <ProtectedRoute allowedRoles={['customer', 'tester', 'earner']}>
       <TesterLayout>
         <div className="space-y-6">
           <div>
@@ -31,8 +31,8 @@ export default function TesterWallet() {
               <div className="relative z-10">
                 <p className="text-zinc-400 font-medium">Available Coins</p>
                 <div className="flex items-end gap-3 mt-2">
-                  <h2 className="text-5xl font-bold">12,000 🪙</h2>
-                  <p className="text-emerald-400 font-medium mb-1 border-l border-zinc-700 pl-3">≈ $120.00 USD</p>
+                  <h2 className="text-4xl md:text-5xl font-black text-white">12,000 <span className="text-2xl font-bold text-amber-400">Coins</span></h2>
+                  <p className="text-emerald-400 font-medium mb-1 border-l border-zinc-700 pl-3">≈ $120.00 USD (PKR 33,600)</p>
                 </div>
                 <div className="mt-8 flex gap-4">
                   <button 
@@ -52,7 +52,7 @@ export default function TesterWallet() {
                   <Clock className="w-5 h-5 text-amber-500" />
                 </div>
                 <h3 className="text-zinc-500 font-medium">Pending Escrow</h3>
-                <p className="text-3xl font-bold text-zinc-900 mt-1">3,500 🪙</p>
+                <p className="text-3xl font-bold text-zinc-900 mt-1">3,500 <span className="text-sm font-bold text-amber-500">Coins</span></p>
               </div>
               <p className="text-sm text-zinc-500 mt-4">Coins from active tests will be available upon completion.</p>
             </div>

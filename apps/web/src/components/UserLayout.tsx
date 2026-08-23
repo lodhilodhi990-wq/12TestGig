@@ -50,7 +50,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     {
       title: '🎮 EARN BY TESTING',
       items: [
-        { name: 'Explore Apps to Test', href: '/tester/tests', icon: CheckSquare, badge: 'Earn 🪙' },
+        { name: 'Explore Apps to Test', href: '/tester/tests', icon: CheckSquare, badge: 'Earn Coins' },
       ],
     },
     {
@@ -68,7 +68,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
       ],
     },
     {
-      title: '🪙 WALLET & PAYMENTS',
+      title: '💰 WALLET & PAYMENTS',
       items: [
         { name: 'Coin Wallet & Withdraw', href: '/tester/wallet', icon: Wallet },
         { name: 'Buy Coins (Deposit)', href: '/customer/billing', icon: CreditCard },
@@ -117,8 +117,10 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
         {/* User Quick Balance Bar */}
         <div className="p-4 mx-3 my-3 bg-gradient-to-br from-zinc-900 to-zinc-950 rounded-2xl text-white shadow-sm relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">🪙</span>
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                <Coins className="w-5 h-5 text-amber-400" />
+              </div>
               <div>
                 <p className="text-[11px] text-zinc-400 font-medium tracking-wide uppercase">Your Balance</p>
                 <p className="text-xl font-bold">15,000 <span className="text-xs font-normal text-amber-400">Coins</span></p>
