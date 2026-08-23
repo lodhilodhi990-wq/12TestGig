@@ -1,46 +1,56 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, Building, Settings, ShieldAlert } from 'lucide-react';
+import { LayoutDashboard, Users, Building, Settings, ShieldAlert, Zap } from 'lucide-react';
 
 export default function Sidebar() {
-  const links = [
-    { name: 'Overview', to: '/dashboard', icon: <LayoutDashboard size={20} /> },
-    { name: 'Organizations', to: '/organizations', icon: <Building size={20} /> },
-    { name: 'Users', to: '/users', icon: <Users size={20} /> },
-    { name: 'Risk / Disputes', to: '/risk', icon: <ShieldAlert size={20} /> },
-    { name: 'Settings', to: '/settings', icon: <Settings size={20} /> },
+  const navItems = [
+    { path: '/dashboard', label: 'Overview', icon: LayoutDashboard },
+    { path: '/users', label: 'Users', icon: Users },
+    { path: '/organizations', label: 'Organizations', icon: Building },
+    { path: '/disputes', label: 'Disputes & Risk', icon: ShieldAlert },
+    { path: '/settings', label: 'Settings', icon: Settings },
   ];
 
   return (
-    <div className="w-64 bg-saas-card border-r border-slate-800 flex flex-col h-full">
-      <div className="p-6">
-        <h1 className="text-2xl font-bold text-saas-accent tracking-tight">12 Test Gig</h1>
-        <p className="text-xs text-saas-muted mt-1 uppercase tracking-wider">Super Admin</p>
+    <aside className="w-64 bg-saas-dark border-r border-saas-border flex flex-col">
+      <div className="h-20 flex items-center px-6 border-b border-saas-border">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-saas-accent rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(59,130,246,0.5)]">
+            <Zap className="w-5 h-5 text-white" />
+          </div>
+          <span className="font-bold text-lg text-white tracking-tight">Admin SaaS</span>
+        </div>
       </div>
       
-      <nav className="flex-1 px-4 space-y-2 mt-4">
-        {links.map((link) => (
+      <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+        {navItems.map((item) => (
           <NavLink
-            key={link.to}
-            to={link.to}
+            key={item.path}
+            to={item.path}
             className={({ isActive }) =>
-              `flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
+              `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                 isActive 
-                  ? 'bg-saas-accent/10 text-saas-accent' 
-                  : 'text-saas-muted hover:bg-slate-800 hover:text-saas-text'
+                  ? 'bg-saas-accent/10 text-saas-accent font-medium shadow-[inset_0_0_0_1px_rgba(59,130,246,0.2)]' 
+                  : 'text-saas-text-muted hover:bg-white/5 hover:text-white'
               }`
             }
           >
-            {link.icon}
-            <span className="font-medium">{link.name}</span>
+            <item.icon className="w-5 h-5" />
+            {item.label}
           </NavLink>
         ))}
       </nav>
-      
-      <div className="p-6 border-t border-slate-800">
-        <button className="w-full py-2 px-4 bg-slate-800 hover:bg-slate-700 text-saas-text rounded-lg transition text-sm font-medium">
-          Sign Out
-        </button>
+
+      <div className="p-4 border-t border-saas-border">
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 border border-white/10">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-saas-accent to-purple-500 flex items-center justify-center text-white font-bold text-sm">
+            A
+          </div>
+          <div className="overflow-hidden">
+            <p className="text-sm font-medium text-white truncate">Admin User</p>
+            <p className="text-xs text-saas-text-muted truncate">admin@12testgig.com</p>
+          </div>
+        </div>
       </div>
-    </div>
+    </aside>
   );
 }
