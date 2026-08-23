@@ -48,7 +48,7 @@ export async function updateChecklistItem(userId: string, appId: string, itemId:
     let completedRequired = 0;
     let totalRequired = 0;
 
-    const updatedItems = data.items.map(item => {
+    const updatedItems = data.items.map((item: ChecklistItem) => {
       if (item.required) totalRequired++;
       
       if (item.id === itemId) {
