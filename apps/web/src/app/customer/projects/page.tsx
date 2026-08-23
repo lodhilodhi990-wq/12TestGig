@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
+import { fetchLivePricingRates, DEFAULT_PRICING_RATES, PricingRates } from '@/lib/pricingRates';
+
 interface Project {
   id: number;
   name: string;
@@ -38,6 +40,7 @@ interface Project {
 }
 
 export default function CustomerProjects() {
+  const [rates, setRates] = useState<PricingRates>(DEFAULT_PRICING_RATES);
   const [showAddModal, setShowAddModal] = useState(false);
   const [playStoreUrl, setPlayStoreUrl] = useState('');
   const [isFetching, setIsFetching] = useState(false);
@@ -53,6 +56,11 @@ export default function CustomerProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
 
   useEffect(() => {
+    fetchLivePricingRates().then(data => {
+      setRates(data);
+      if (data.dailyTesterPayout) setDailyRate(data.dailyTesterPayout);
+    });
+
     try {
       const saved = localStorage.getItem('user_apps_campaigns');
       if (saved) {
@@ -465,7 +473,9 @@ export default function CustomerProjects() {
                           <Coins className="w-4 h-4 text-amber-500" />
                           <span>{calculatedCost.toLocaleString()} Coins</span>
                         </div>
-                        <p className="text-[10px] text-emerald-600 font-bold">≈ ${(calculatedCost / 100).toFixed(2)} USD</p>
+                        <p className="text-[10px] text-emerald-600 font-bold">
+                          ≈ ${(calculatedCost / (rates.coinsPerUsd || 100)).toFixed(2)} USD (Rs {Math.round((calculatedCost / (rates.coinsPerUsd || 100)) * (rates.pkrPerUsd || 280)).toLocaleString()} PKR)
+                        </p>
                       </div>
                     </div>
                   </div>
