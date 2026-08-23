@@ -9,12 +9,12 @@ export default function MyTests() {
   const [selectedTask, setSelectedTask] = useState<number | null>(null);
 
   const activeTests = [
-    { id: 1, name: 'Fitness Tracker Pro', daysLeft: 4, status: 'In Progress', reward: '$15', completedTasks: 9, totalTasks: 14 },
-    { id: 2, name: 'Language Learner', daysLeft: 12, status: 'Just Started', reward: '$20', completedTasks: 2, totalTasks: 14 },
+    { id: 1, name: 'Fitness Tracker Pro', daysLeft: 4, status: 'In Progress', reward: '1,500 🪙', completedTasks: 9, totalTasks: 14 },
+    { id: 2, name: 'Language Learner', daysLeft: 12, status: 'Just Started', reward: '2,000 🪙', completedTasks: 2, totalTasks: 14 },
   ];
 
   const completedTests = [
-    { id: 3, name: 'Meditation App', date: '2023-10-15', reward: '$12', status: 'Paid' },
+    { id: 3, name: 'Meditation App', date: '2023-10-15', reward: '1,200 🪙', status: 'Paid' },
   ];
 
   const handleStartTask = (id: number) => {

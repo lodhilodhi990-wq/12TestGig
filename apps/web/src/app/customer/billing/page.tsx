@@ -1,12 +1,13 @@
 'use client';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import CustomerLayout from '@/components/CustomerLayout';
-import { CreditCard, Wallet, Download, Receipt, Plus } from 'lucide-react';
+import { CreditCard, Download, ExternalLink, ShieldCheck, Coins } from 'lucide-react';
 
 export default function CustomerBilling() {
   const invoices = [
-    { id: 'INV-001', date: 'Oct 1, 2023', amount: '$60.00', status: 'Paid', desc: 'Campaign Deposit: Fitness Tracker Pro' },
-    { id: 'INV-002', date: 'Sep 15, 2023', amount: '$60.00', status: 'Paid', desc: 'Campaign Deposit: Language Learner' },
+    { id: 'INV-2023-001', date: 'Oct 24, 2023', amount: '$50.00 (5,000 🪙)', status: 'Paid' },
+    { id: 'INV-2023-002', date: 'Sep 24, 2023', amount: '$100.00 (10,000 🪙)', status: 'Paid' },
+    { id: 'INV-2023-003', date: 'Aug 24, 2023', amount: '$150.00 (15,000 🪙)', status: 'Paid' },
   ];
 
   return (
@@ -14,21 +15,27 @@ export default function CustomerBilling() {
       <CustomerLayout>
         <div className="space-y-6">
           <div>
-            <h1 className="text-2xl font-bold text-zinc-900">Billing & Wallet</h1>
-            <p className="text-zinc-500 mt-1">Manage your funds and billing history.</p>
+            <h1 className="text-2xl font-bold text-zinc-900">Billing & Coins</h1>
+            <p className="text-zinc-500 mt-1">Manage your Coin balance to fund your testing campaigns.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-zinc-950 text-white p-8 rounded-2xl relative overflow-hidden shadow-lg">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-2 bg-zinc-950 text-white rounded-2xl p-8 relative overflow-hidden">
               <div className="absolute top-0 right-0 p-8 opacity-10">
-                <Wallet className="w-32 h-32" />
+                <Coins className="w-32 h-32" />
               </div>
               <div className="relative z-10">
-                <p className="text-zinc-400 font-medium">Current Balance</p>
-                <h2 className="text-5xl font-bold mt-2">$120.00</h2>
+                <p className="text-zinc-400 font-medium">Available Coins</p>
+                <div className="flex items-end gap-3 mt-2">
+                  <h2 className="text-5xl font-bold">12,500 🪙</h2>
+                  <p className="text-emerald-400 font-medium mb-1 border-l border-zinc-700 pl-3">≈ $125.00 USD</p>
+                </div>
                 <div className="mt-8 flex gap-4">
-                  <button className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors flex items-center gap-2">
-                    <Plus className="w-4 h-4" /> Add Funds
+                  <button className="px-6 py-3 bg-white text-black font-semibold rounded-xl hover:bg-zinc-200 transition-colors">
+                    Buy More Coins
+                  </button>
+                  <button className="px-6 py-3 bg-zinc-800 text-white font-semibold rounded-xl hover:bg-zinc-700 transition-colors">
+                    Payment Methods
                   </button>
                 </div>
               </div>

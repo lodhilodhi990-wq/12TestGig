@@ -1,14 +1,21 @@
 'use client';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import EarnerLayout from '@/components/EarnerLayout';
-import { Users, DollarSign, Activity, TrendingUp } from 'lucide-react';
+import { DollarSign, Users, Activity, Link as LinkIcon, Plus, Copy, Coins } from 'lucide-react';
+import Link from 'next/link';
 
 export default function EarnerDashboard() {
   const metrics = [
-    { title: 'Total Commission', value: '$450.00', icon: DollarSign, color: 'text-emerald-600', bg: 'bg-emerald-100' },
-    { title: 'Active Network', value: '12', icon: Users, color: 'text-blue-600', bg: 'bg-blue-100' },
-    { title: 'Completed Referrals', value: '8', icon: Activity, color: 'text-purple-600', bg: 'bg-purple-100' },
-    { title: 'Conversion Rate', value: '65%', icon: TrendingUp, color: 'text-amber-500', bg: 'bg-amber-100' },
+    { label: 'Total Commission', value: '45,000 🪙', icon: Coins, trend: '≈ $450.00 USD' },
+    { label: 'Active Testers', value: '124', icon: Users, trend: '+12 this week' },
+    { label: 'Pending Payout', value: '5,000 🪙', icon: Activity, trend: '≈ $50.00 USD' },
+    { label: 'Click Rate', value: '24.5%', icon: LinkIcon, trend: '+2.1% this week' },
+  ];
+
+  const recentActivity = [
+    { id: 1, action: 'New Tester Registered', details: 'via Your Link', time: '2 hours ago', status: 'Completed' },
+    { id: 2, action: 'Commission Earned', details: '+150 🪙', time: '5 hours ago', status: 'Credited' },
+    { id: 3, action: 'Payout Processed', details: '10,000 🪙', time: '1 day ago', status: 'Completed' },
   ];
 
   return (
@@ -23,14 +30,15 @@ export default function EarnerDashboard() {
           {/* Metrics Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {metrics.map((metric) => (
-              <div key={metric.title} className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm flex flex-col">
+              <div key={metric.label} className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm flex flex-col">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${metric.bg}`}>
-                    <metric.icon className={`w-5 h-5 ${metric.color}`} />
+                  <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+                    <metric.icon className="w-5 h-5 text-blue-600" />
                   </div>
-                  <h3 className="text-sm font-medium text-zinc-500">{metric.title}</h3>
+                  <h3 className="text-sm font-medium text-zinc-500">{metric.label}</h3>
                 </div>
                 <p className="text-3xl font-bold text-zinc-900">{metric.value}</p>
+                <p className="text-xs text-emerald-600 font-medium mt-2">{metric.trend}</p>
               </div>
             ))}
           </div>

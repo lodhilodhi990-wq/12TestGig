@@ -1,27 +1,27 @@
 'use client';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import TesterLayout from '@/components/TesterLayout';
-import { DollarSign, CheckCircle2, Star, Clock, ChevronRight } from 'lucide-react';
+import { CheckCircle2, TrendingUp, Award, Coins, ChevronRight, Clock } from 'lucide-react';
 import Link from 'next/link';
 
 export default function TesterDashboard() {
   // Placeholder Data for UI Display
   const metrics = [
-    { title: 'Total Earned', value: '$120.00', icon: DollarSign, color: 'text-emerald-600', bg: 'bg-emerald-100' },
-    { title: 'Active Tests', value: '2', icon: Clock, color: 'text-blue-600', bg: 'bg-blue-100' },
-    { title: 'Quality Score', value: '4.8/5', icon: Star, color: 'text-amber-500', bg: 'bg-amber-100' },
-    { title: 'Completed', value: '15', icon: CheckCircle2, color: 'text-purple-600', bg: 'bg-purple-100' },
+    { title: 'Total Earned', value: '15,000 🪙', icon: Coins, color: 'text-emerald-600', bg: 'bg-emerald-100' },
+    { title: 'Active Tests', value: '2', icon: TrendingUp, color: 'text-blue-600', bg: 'bg-blue-100' },
+    { title: 'Quality Score', value: '4.8/5.0', icon: Award, color: 'text-amber-500', bg: 'bg-amber-100' },
+    { title: 'Completed', value: '14', icon: CheckCircle2, color: 'text-purple-600', bg: 'bg-purple-100' },
   ];
 
   const activeTests = [
-    { id: 1, name: 'Fitness Tracker Pro', daysLeft: 4, status: 'In Progress', reward: '$15' },
-    { id: 2, name: 'Language Learner', daysLeft: 12, status: 'Just Started', reward: '$20' },
+    { id: 1, name: 'Fitness Tracker Pro', daysLeft: 4, status: 'In Progress', reward: '1,500 🪙' },
+    { id: 2, name: 'Language Learner', daysLeft: 12, status: 'Just Started', reward: '2,000 🪙' },
   ];
 
   const availableCampaigns = [
-    { id: 3, name: 'Crypto Wallet App', category: 'Finance', reward: '$25', slots: 3 },
-    { id: 4, name: 'Food Delivery Service', category: 'Lifestyle', reward: '$15', slots: 8 },
-    { id: 5, name: 'Meditation Plus', category: 'Health', reward: '$12', slots: 12 },
+    { id: 3, name: 'Meditate Daily', category: 'Health & Fitness', reward: '1,200 🪙', slots: 3 },
+    { id: 4, name: 'Expense Manager', category: 'Finance', reward: '1,800 🪙', slots: 8 },
+    { id: 5, name: 'Meditation Plus', category: 'Health', reward: '1,000 🪙', slots: 12 },
   ];
 
   return (

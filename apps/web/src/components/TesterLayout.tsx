@@ -3,7 +3,8 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { LayoutDashboard, Wallet, CheckSquare, Settings, LogOut, Zap } from 'lucide-react';
+import { LayoutDashboard, Wallet, CheckSquare, Settings, LogOut, Code } from 'lucide-react';
+import WorkspaceSwitcher from './WorkspaceSwitcher';
 
 export default function TesterLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -23,13 +24,17 @@ export default function TesterLayout({ children }: { children: React.ReactNode }
         <div className="h-16 flex items-center px-6 border-b border-zinc-200">
           <Link href="/tester/dashboard" className="flex items-center gap-2 font-bold text-xl">
             <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-              <Zap className="w-5 h-5 text-white" />
+              <Code className="w-5 h-5 text-white" />
             </div>
             12 Test Gig
           </Link>
         </div>
         
-        <div className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+        <div className="px-4 py-4 border-b border-zinc-100">
+          <WorkspaceSwitcher />
+        </div>
+
+        <div className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
           {navigation.map((item) => {
             const isActive = pathname === item.href;
             return (

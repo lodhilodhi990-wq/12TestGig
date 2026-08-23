@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { LayoutDashboard, Wallet, Users, Settings, LogOut, Zap } from 'lucide-react';
+import WorkspaceSwitcher from './WorkspaceSwitcher';
 
 export default function EarnerLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -28,8 +29,12 @@ export default function EarnerLayout({ children }: { children: React.ReactNode }
             12 Test Gig
           </Link>
         </div>
+
+        <div className="px-4 py-4 border-b border-zinc-100">
+          <WorkspaceSwitcher />
+        </div>
         
-        <div className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+        <div className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
           {navigation.map((item) => {
             const isActive = pathname === item.href;
             return (
