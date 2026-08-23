@@ -9,11 +9,14 @@ import {
   Rocket, 
   ExternalLink,
   ShieldCheck,
-  AlertCircle,
-  Image as ImageIcon,
   Clock,
   Trash2,
-  Play
+  Users,
+  Coins,
+  Sliders,
+  Award,
+  Zap,
+  Info
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -24,6 +27,9 @@ interface Project {
   category: string;
   icon: string;
   status: string;
+  testersCount: number;
+  durationDays: number;
+  dailyReward: number;
   testers: string;
   daysRemaining: number;
   budgetCoins: string;
@@ -38,7 +44,12 @@ export default function CustomerProjects() {
   const [fetchedData, setFetchedData] = useState<any>(null);
   const [instructions, setInstructions] = useState('');
 
-  // Start with clean dynamic state (persisted in localStorage if available)
+  // Customizable Campaign Configuration
+  const [testerCount, setTesterCount] = useState<number>(20);
+  const [durationDays, setDurationDays] = useState<number>(14);
+  const [dailyRate, setDailyRate] = useState<number>(100);
+  const [selectedPreset, setSelectedPreset] = useState<'playstore' | 'quick' | 'pro' | 'custom'>('playstore');
+
   const [projects, setProjects] = useState<Project[]>([]);
 
   useEffect(() => {
@@ -58,6 +69,26 @@ export default function CustomerProjects() {
       localStorage.setItem('user_apps_campaigns', JSON.stringify(newProjects));
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  // Dynamic Cost Calculator
+  const calculatedCost = Math.round((testerCount * durationDays * (dailyRate / 14)) + (testerCount * 50));
+
+  const applyPreset = (preset: 'playstore' | 'quick' | 'pro' | 'custom') => {
+    setSelectedPreset(preset);
+    if (preset === 'playstore') {
+      setTesterCount(20);
+      setDurationDays(14);
+      setDailyRate(100);
+    } else if (preset === 'quick') {
+      setTesterCount(10);
+      setDurationDays(7);
+      setDailyRate(100);
+    } else if (preset === 'pro') {
+      setTesterCount(30);
+      setDurationDays(14);
+      setDailyRate(150);
     }
   };
 
@@ -88,9 +119,6 @@ export default function CustomerProjects() {
             category: data.category || 'Tools & Utilities',
             icon: data.icon,
             description: data.description || `Play Store verified testing build for ${data.name}.`,
-            testersTarget: 20,
-            durationDays: 14,
-            requiredCoins: 2000,
             playStoreUrl: data.playStoreUrl || url
           });
         }
@@ -111,10 +139,13 @@ export default function CustomerProjects() {
       package: fetchedData.package,
       category: fetchedData.category,
       icon: fetchedData.icon,
-      status: 'Recruiting 20 Testers (Day 1/14)',
-      testers: '0/20 Testers Active',
-      daysRemaining: 14,
-      budgetCoins: `${fetchedData.requiredCoins.toLocaleString()} Coins`,
+      status: `Active (${durationDays}-Day Track)`,
+      testersCount: testerCount,
+      durationDays: durationDays,
+      dailyReward: dailyRate,
+      testers: `0/${testerCount} Testers Joined`,
+      daysRemaining: durationDays,
+      budgetCoins: `${calculatedCost.toLocaleString()} Coins`,
       description: instructions || fetchedData.description,
       playStoreUrl: fetchedData.playStoreUrl
     };
@@ -125,7 +156,7 @@ export default function CustomerProjects() {
     setPlayStoreUrl('');
     setFetchedData(null);
     setInstructions('');
-    alert(`🎉 Campaign for "${newProject.name}" launched with real Google Play logo! 20 certified testers will begin testing.`);
+    alert(`🎉 Campaign for "${newProject.name}" launched! ${testerCount} testers assigned for ${durationDays} days.`);
   };
 
   const handleDeleteApp = (id: number) => {
@@ -147,7 +178,7 @@ export default function CustomerProjects() {
                 My Apps & Google Play Closed Testing
               </h1>
               <p className="text-zinc-500 text-xs md:text-sm mt-1">
-                Paste your Google Play Store URL &rarr; our system automatically fetches your real app logo, details & assigns 20 testers for 14 days!
+                Customize tester count (10, 20, 50+), test duration (7-30 days), and launch closed test campaigns!
               </p>
             </div>
             <button 
@@ -166,7 +197,7 @@ export default function CustomerProjects() {
               </div>
               <h2 className="text-lg font-black text-zinc-900">No Apps Added Yet</h2>
               <p className="text-xs text-zinc-500 mt-1.5 max-w-sm leading-relaxed">
-                Paste your Google Play Store link (e.g. closed testing track or live app) to auto-fetch the real logo and launch your 20-tester campaign!
+                Paste your Google Play Store link (e.g. closed testing track or live app) to auto-fetch the real logo, customize your testers count and launch!
               </p>
               <button 
                 onClick={() => setShowAddModal(true)}
@@ -183,17 +214,14 @@ export default function CustomerProjects() {
                     <div className="flex items-start justify-between gap-3 mb-4">
                       {/* REAL APP LOGO */}
                       <div className="w-16 h-16 rounded-2xl bg-zinc-100 border border-zinc-200 overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
-                        {proj.icon.startsWith('http') ? (
+                        {proj.icon?.startsWith('http') ? (
                           <img 
                             src={proj.icon} 
                             alt={proj.name} 
                             className="w-full h-full object-cover"
-                            onError={(e) => {
-                              (e.target as HTMLElement).style.display = 'none';
-                            }}
                           />
                         ) : (
-                          <span className="text-3xl">{proj.icon}</span>
+                          <span className="text-3xl">{proj.icon || '📱'}</span>
                         )}
                       </div>
 
@@ -203,7 +231,7 @@ export default function CustomerProjects() {
                         </span>
                         <button 
                           onClick={() => handleDeleteApp(proj.id)}
-                          className="text-zinc-400 hover:text-red-500 p-1 rounded-lg"
+                          className="text-zinc-400 hover:text-red-500 p-1 rounded-lg transition"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -226,7 +254,7 @@ export default function CustomerProjects() {
 
                   <div className="px-6 py-3.5 bg-zinc-50 border-t border-zinc-100 flex justify-between items-center text-xs">
                     <Link href={`/customer/campaigns?project=${proj.id}`} className="font-bold text-indigo-600 hover:underline flex items-center gap-1">
-                      View 14-Day Progress &rarr;
+                      View Campaign Progress &rarr;
                     </Link>
                     <span className="text-[11px] text-zinc-400 font-semibold">{proj.category}</span>
                   </div>
@@ -242,12 +270,12 @@ export default function CustomerProjects() {
                   <Plus className="w-6 h-6" />
                 </div>
                 <h3 className="font-bold text-sm text-zinc-900 group-hover:text-indigo-600 transition">+ Add Another App</h3>
-                <p className="text-xs text-zinc-500 mt-1 max-w-[200px]">Paste Play Store link to auto-fetch real icon and details.</p>
+                <p className="text-xs text-zinc-500 mt-1 max-w-[200px]">Paste Play Store link to customize testers & launch.</p>
               </div>
             </div>
           )}
 
-          {/* Add App & Auto-Fetch Modal */}
+          {/* ADVANCED ADD APP & CAMPAIGN CUSTOMIZER MODAL */}
           {showAddModal && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full p-6 md:p-8 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200">
@@ -257,17 +285,18 @@ export default function CustomerProjects() {
                       <Sparkles className="w-4 h-4" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-black text-zinc-900">Add App & Auto-Fetch Real Logo</h3>
-                      <p className="text-xs text-zinc-500">Google Play Store Real-Time Metadata Fetcher</p>
+                      <h3 className="text-lg font-black text-zinc-900">Custom Campaign Builder</h3>
+                      <p className="text-xs text-zinc-500">Auto-fetches app logo & allows customizable tester packages</p>
                     </div>
                   </div>
                   <button onClick={() => setShowAddModal(false)} className="text-zinc-400 hover:text-zinc-600 text-lg font-bold">✕</button>
                 </div>
 
-                <div className="space-y-4 mb-6">
+                <div className="space-y-5 mb-6">
+                  {/* URL Input Box */}
                   <div>
                     <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1.5">
-                      Paste Google Play Store URL or Package Name
+                      Paste Google Play Store Link or Package Name
                     </label>
                     <div className="relative">
                       <input 
@@ -283,30 +312,17 @@ export default function CustomerProjects() {
                         </div>
                       )}
                     </div>
-                    <p className="text-[11px] text-zinc-400 mt-1">
-                      Paste any Google Play link (e.g. <code>https://play.google.com/store/apps/details?id=com.spotify.music</code>)
-                    </p>
                   </div>
 
-                  {/* Auto-Fetched REAL LOGO Preview */}
+                  {/* Auto-Fetched Real Logo Preview */}
                   {fetchedData && (
                     <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-50/80 to-blue-50/80 border border-indigo-200 animate-in fade-in slide-in-from-top-2 duration-300">
-                      <div className="flex items-center gap-2 mb-3">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                        <span className="text-xs font-bold text-emerald-700">Real Play Store Logo & Info Detected</span>
-                      </div>
-
-                      <div className="flex items-start gap-3.5 mb-3">
-                        {/* REAL LOGO */}
-                        <div className="w-16 h-16 rounded-2xl bg-white border border-zinc-200 overflow-hidden flex items-center justify-center shadow-sm shrink-0">
+                      <div className="flex items-start gap-3.5">
+                        <div className="w-14 h-14 rounded-2xl bg-white border border-zinc-200 overflow-hidden flex items-center justify-center shadow-sm shrink-0">
                           {fetchedData.icon?.startsWith('http') ? (
-                            <img 
-                              src={fetchedData.icon} 
-                              alt={fetchedData.name} 
-                              className="w-full h-full object-cover" 
-                            />
+                            <img src={fetchedData.icon} alt={fetchedData.name} className="w-full h-full object-cover" />
                           ) : (
-                            <span className="text-3xl">{fetchedData.icon}</span>
+                            <span className="text-3xl">{fetchedData.icon || '📱'}</span>
                           )}
                         </div>
 
@@ -318,39 +334,152 @@ export default function CustomerProjects() {
                           </span>
                         </div>
                       </div>
-
-                      <p className="text-xs text-zinc-600 line-clamp-2 mt-2 bg-white/60 p-2.5 rounded-xl border border-indigo-100/60">
-                        {fetchedData.description}
-                      </p>
-
-                      {/* Campaign Specifications */}
-                      <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-indigo-200/60 text-center">
-                        <div className="bg-white/90 p-2 rounded-xl border border-indigo-100">
-                          <p className="text-[10px] text-zinc-500 font-medium">Testers</p>
-                          <p className="text-xs font-black text-zinc-900">20 Verified</p>
-                        </div>
-                        <div className="bg-white/90 p-2 rounded-xl border border-indigo-100">
-                          <p className="text-[10px] text-zinc-500 font-medium">Duration</p>
-                          <p className="text-xs font-black text-zinc-900">14 Days</p>
-                        </div>
-                        <div className="bg-white/90 p-2 rounded-xl border border-indigo-100">
-                          <p className="text-[10px] text-zinc-500 font-medium">Required Coins</p>
-                          <p className="text-xs font-black text-amber-600">2,000 Coins</p>
-                        </div>
-                      </div>
                     </div>
                   )}
 
-                  {/* Testing Instructions Form */}
+                  {/* PRESET PACKAGES SELECTOR */}
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <Award className="w-3.5 h-3.5 text-blue-600" /> Select Testing Package
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => applyPreset('playstore')}
+                        className={`p-3 rounded-2xl border text-left transition-all ${
+                          selectedPreset === 'playstore' 
+                            ? 'bg-blue-50 border-blue-600 text-blue-900 shadow-sm ring-1 ring-blue-600' 
+                            : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100 text-zinc-700'
+                        }`}
+                      >
+                        <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block">Google Play Req</span>
+                        <p className="font-extrabold text-xs mt-0.5">20 Testers</p>
+                        <p className="text-[11px] text-zinc-500 font-medium">14 Days • 2,000 Coins</p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => applyPreset('quick')}
+                        className={`p-3 rounded-2xl border text-left transition-all ${
+                          selectedPreset === 'quick' 
+                            ? 'bg-blue-50 border-blue-600 text-blue-900 shadow-sm ring-1 ring-blue-600' 
+                            : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100 text-zinc-700'
+                        }`}
+                      >
+                        <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider block">Quick Audit</span>
+                        <p className="font-extrabold text-xs mt-0.5">10 Testers</p>
+                        <p className="text-[11px] text-zinc-500 font-medium">7 Days • 800 Coins</p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => applyPreset('pro')}
+                        className={`p-3 rounded-2xl border text-left transition-all ${
+                          selectedPreset === 'pro' 
+                            ? 'bg-blue-50 border-blue-600 text-blue-900 shadow-sm ring-1 ring-blue-600' 
+                            : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100 text-zinc-700'
+                        }`}
+                      >
+                        <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider block">Pro Coverage</span>
+                        <p className="font-extrabold text-xs mt-0.5">30 Testers</p>
+                        <p className="text-[11px] text-zinc-500 font-medium">14 Days • 3,500 Coins</p>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* CUSTOMIZABLE SLIDERS & CONTROLS */}
+                  <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-zinc-800 flex items-center gap-1.5">
+                        <Sliders className="w-3.5 h-3.5 text-zinc-600" /> Fine-Tune Campaign Settings
+                      </span>
+                      <button 
+                        type="button" 
+                        onClick={() => setSelectedPreset('custom')}
+                        className="text-[11px] font-bold text-blue-600 hover:underline"
+                      >
+                        Custom Mode
+                      </button>
+                    </div>
+
+                    {/* 1. Testers Count Slider & Input */}
+                    <div>
+                      <div className="flex justify-between text-xs mb-1.5 font-bold">
+                        <span className="text-zinc-600">Number of Certified Testers:</span>
+                        <span className="text-blue-600 text-sm font-black">{testerCount} Testers</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <input 
+                          type="range" 
+                          min={5} 
+                          max={100} 
+                          step={5}
+                          value={testerCount}
+                          onChange={(e) => { setTesterCount(Number(e.target.value)); setSelectedPreset('custom'); }}
+                          className="w-full accent-blue-600 cursor-pointer h-2 bg-zinc-200 rounded-lg"
+                        />
+                        <input 
+                          type="number"
+                          min={1}
+                          max={500}
+                          value={testerCount}
+                          onChange={(e) => { setTesterCount(Math.max(1, Number(e.target.value))); setSelectedPreset('custom'); }}
+                          className="w-16 px-2 py-1 bg-white border border-zinc-300 rounded-xl text-xs font-bold text-center font-mono"
+                        />
+                      </div>
+                      <p className="text-[10px] text-zinc-400 mt-1">Google Play Console closed testing requires at least 20 testers.</p>
+                    </div>
+
+                    {/* 2. Duration Selector */}
+                    <div>
+                      <div className="flex justify-between text-xs mb-1.5 font-bold">
+                        <span className="text-zinc-600">Testing Duration:</span>
+                        <span className="text-indigo-600 text-sm font-black">{durationDays} Days</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2">
+                        {[7, 14, 21, 30].map(d => (
+                          <button
+                            key={d}
+                            type="button"
+                            onClick={() => { setDurationDays(d); setSelectedPreset('custom'); }}
+                            className={`py-1.5 text-xs font-bold rounded-xl border transition ${
+                              durationDays === d 
+                                ? 'bg-indigo-600 text-white border-indigo-600 shadow' 
+                                : 'bg-white text-zinc-700 border-zinc-300 hover:bg-zinc-100'
+                            }`}
+                          >
+                            {d} Days
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 3. Dynamic Calculation Summary Bar */}
+                    <div className="pt-3 border-t border-zinc-200 flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Total Campaign Cost</p>
+                        <p className="text-xs text-zinc-600">{testerCount} testers × {durationDays} days</p>
+                      </div>
+                      <div className="text-right">
+                        <div className="flex items-center gap-1 text-base font-black text-amber-600">
+                          <Coins className="w-4 h-4 text-amber-500" />
+                          <span>{calculatedCost.toLocaleString()} Coins</span>
+                        </div>
+                        <p className="text-[10px] text-emerald-600 font-bold">≈ ${(calculatedCost / 100).toFixed(2)} USD</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Special Instructions */}
                   <div>
                     <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1.5">
-                      Instructions for Testers (Optional)
+                      Special Testing Instructions (Optional)
                     </label>
                     <textarea 
                       rows={2} 
                       value={instructions}
                       onChange={(e) => setInstructions(e.target.value)}
-                      placeholder="e.g. Please test user login, browse products, and verify no crash on Android 14."
+                      placeholder="e.g. Please test user login, browse catalog, test checkout, and verify no crashes on Android 14."
                       className="w-full bg-zinc-50 border border-zinc-300 rounded-2xl p-3 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
                     />
                   </div>
@@ -368,7 +497,7 @@ export default function CustomerProjects() {
                     disabled={!fetchedData}
                     className="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl transition shadow-lg shadow-blue-600/20 disabled:opacity-40"
                   >
-                    🚀 Launch Campaign (2,000 Coins)
+                    🚀 Launch Campaign ({calculatedCost.toLocaleString()} Coins)
                   </button>
                 </div>
               </div>

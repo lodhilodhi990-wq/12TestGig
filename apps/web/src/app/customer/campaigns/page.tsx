@@ -12,7 +12,9 @@ import {
   ExternalLink,
   ShieldCheck,
   Sparkles,
-  Trash2
+  Coins,
+  Award,
+  Sliders
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -37,6 +39,12 @@ export default function CustomerCampaigns() {
   const [fetchedData, setFetchedData] = useState<any>(null);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
 
+  // Customizable settings
+  const [testerCount, setTesterCount] = useState<number>(20);
+  const [durationDays, setDurationDays] = useState<number>(14);
+  const [dailyRate, setDailyRate] = useState<number>(100);
+  const [selectedPreset, setSelectedPreset] = useState<'playstore' | 'quick' | 'pro' | 'custom'>('playstore');
+
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
 
   useEffect(() => {
@@ -56,6 +64,25 @@ export default function CustomerCampaigns() {
       localStorage.setItem('user_apps_campaigns', JSON.stringify(newCamps));
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const calculatedCost = Math.round((testerCount * durationDays * (dailyRate / 14)) + (testerCount * 50));
+
+  const applyPreset = (preset: 'playstore' | 'quick' | 'pro' | 'custom') => {
+    setSelectedPreset(preset);
+    if (preset === 'playstore') {
+      setTesterCount(20);
+      setDurationDays(14);
+      setDailyRate(100);
+    } else if (preset === 'quick') {
+      setTesterCount(10);
+      setDurationDays(7);
+      setDailyRate(100);
+    } else if (preset === 'pro') {
+      setTesterCount(30);
+      setDurationDays(14);
+      setDailyRate(150);
     }
   };
 
@@ -81,9 +108,6 @@ export default function CustomerCampaigns() {
             package: data.packageId,
             icon: data.icon,
             category: data.category || 'Tools',
-            testers: 20,
-            days: 14,
-            costCoins: 2000,
             playStoreUrl: data.playStoreUrl || url
           });
         }
@@ -103,12 +127,12 @@ export default function CustomerCampaigns() {
       name: fetchedData.name,
       package: fetchedData.package,
       icon: fetchedData.icon,
-      status: 'Active',
-      testers: '0/20 Testers Assigned',
+      status: `Active (${durationDays}-Day Track)`,
+      testers: `0/${testerCount} Testers Assigned`,
       spent: '0 Coins',
-      budget: `${fetchedData.costCoins.toLocaleString()} Coins`,
+      budget: `${calculatedCost.toLocaleString()} Coins`,
       daysPassed: 1,
-      totalDays: 14,
+      totalDays: durationDays,
       playStoreUrl: fetchedData.playStoreUrl
     };
 
@@ -117,7 +141,7 @@ export default function CustomerCampaigns() {
     setShowLaunchModal(false);
     setPlayStoreUrl('');
     setFetchedData(null);
-    alert(`🚀 Campaign for "${newCamp.name}" launched with real Google Play logo! 20 certified testers assigned.`);
+    alert(`🚀 Campaign for "${newCamp.name}" launched! ${testerCount} testers assigned.`);
   };
 
   return (
@@ -132,7 +156,7 @@ export default function CustomerCampaigns() {
                 Google Play Closed Testing Campaigns
               </h1>
               <p className="text-zinc-500 text-xs md:text-sm mt-1">
-                Monitor 20 testers engagement, 14-day compliance count, and export Google Play audit logs.
+                Customize tester slots, testing duration, and track daily progress logs.
               </p>
             </div>
             <button 
@@ -151,7 +175,7 @@ export default function CustomerCampaigns() {
               </div>
               <h2 className="text-lg font-black text-zinc-900">No Active Campaigns</h2>
               <p className="text-xs text-zinc-500 mt-1.5 max-w-sm">
-                Paste your Google Play closed test link to launch a 14-day campaign with 20 real testers.
+                Paste your Google Play closed test link to launch a custom campaign with real certified testers.
               </p>
               <button 
                 onClick={() => setShowLaunchModal(true)}
@@ -163,8 +187,8 @@ export default function CustomerCampaigns() {
           ) : (
             <div className="bg-white rounded-3xl border border-zinc-200 shadow-sm overflow-hidden">
               <div className="p-6 border-b border-zinc-100 flex items-center justify-between">
-                <h2 className="text-base font-bold text-zinc-900">Your Active & Completed Campaigns</h2>
-                <span className="text-xs text-zinc-400 font-medium">Standard: 20 testers • 14 continuous days</span>
+                <h2 className="text-base font-bold text-zinc-900">Your Active Campaigns</h2>
+                <span className="text-xs text-zinc-400 font-medium">Customizable duration & tester capacity</span>
               </div>
 
               <div className="overflow-x-auto">
@@ -175,7 +199,7 @@ export default function CustomerCampaigns() {
                       <th className="p-4">Spent Coins</th>
                       <th className="p-4">Budget</th>
                       <th className="p-4">Tester Capacity</th>
-                      <th className="p-4">14-Day Progress</th>
+                      <th className="p-4">Progress Track</th>
                       <th className="p-4">Status</th>
                       <th className="p-4 text-right">Actions</th>
                     </tr>
@@ -216,10 +240,8 @@ export default function CustomerCampaigns() {
                           </div>
                         </td>
                         <td className="p-4">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                            camp.status === 'Active' ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'
-                          }`}>
-                            {camp.status === 'Active' ? <Clock className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700">
+                            <Clock className="w-3.5 h-3.5" />
                             {camp.status}
                           </span>
                         </td>
@@ -239,24 +261,24 @@ export default function CustomerCampaigns() {
             </div>
           )}
 
-          {/* Launch Modal with Real Logo Fetcher */}
+          {/* ADVANCED CUSTOM CAMPAIGN BUILDER MODAL */}
           {showLaunchModal && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 md:p-8 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200">
+              <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full p-6 md:p-8 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
                       <Sparkles className="w-4 h-4" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-black text-zinc-900">Launch Closed Test Campaign</h3>
-                      <p className="text-xs text-zinc-500">Auto-fetches real Play Store app logo & details</p>
+                      <h3 className="text-xl font-black text-zinc-900">Custom Campaign Builder</h3>
+                      <p className="text-xs text-zinc-500">Auto-fetches app logo & allows custom tester configuration</p>
                     </div>
                   </div>
                   <button onClick={() => setShowLaunchModal(false)} className="text-zinc-400 hover:text-zinc-600 text-lg font-bold">✕</button>
                 </div>
 
-                <div className="space-y-4 mb-6">
+                <div className="space-y-5 mb-6">
                   <div>
                     <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1.5">
                       Google Play Store URL or Package ID
@@ -295,12 +317,124 @@ export default function CustomerCampaigns() {
                           </span>
                         </div>
                       </div>
-                      <div className="mt-3 pt-3 border-t border-indigo-200 flex justify-between text-xs font-bold">
-                        <span className="text-zinc-700">20 Testers x 14 Days</span>
-                        <span className="text-amber-600 font-black">Cost: 2,000 Coins</span>
-                      </div>
                     </div>
                   )}
+
+                  {/* Preset Packages */}
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <Award className="w-3.5 h-3.5 text-blue-600" /> Select Testing Package
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => applyPreset('playstore')}
+                        className={`p-3 rounded-2xl border text-left transition-all ${
+                          selectedPreset === 'playstore' 
+                            ? 'bg-blue-50 border-blue-600 text-blue-900 shadow-sm ring-1 ring-blue-600' 
+                            : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100 text-zinc-700'
+                        }`}
+                      >
+                        <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block">Google Play Req</span>
+                        <p className="font-extrabold text-xs mt-0.5">20 Testers</p>
+                        <p className="text-[11px] text-zinc-500 font-medium">14 Days • 2,000 Coins</p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => applyPreset('quick')}
+                        className={`p-3 rounded-2xl border text-left transition-all ${
+                          selectedPreset === 'quick' 
+                            ? 'bg-blue-50 border-blue-600 text-blue-900 shadow-sm ring-1 ring-blue-600' 
+                            : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100 text-zinc-700'
+                        }`}
+                      >
+                        <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider block">Quick Audit</span>
+                        <p className="font-extrabold text-xs mt-0.5">10 Testers</p>
+                        <p className="text-[11px] text-zinc-500 font-medium">7 Days • 800 Coins</p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => applyPreset('pro')}
+                        className={`p-3 rounded-2xl border text-left transition-all ${
+                          selectedPreset === 'pro' 
+                            ? 'bg-blue-50 border-blue-600 text-blue-900 shadow-sm ring-1 ring-blue-600' 
+                            : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100 text-zinc-700'
+                        }`}
+                      >
+                        <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider block">Pro Coverage</span>
+                        <p className="font-extrabold text-xs mt-0.5">30 Testers</p>
+                        <p className="text-[11px] text-zinc-500 font-medium">14 Days • 3,500 Coins</p>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Customizable Sliders */}
+                  <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200 space-y-4">
+                    <div>
+                      <div className="flex justify-between text-xs mb-1.5 font-bold">
+                        <span className="text-zinc-600">Number of Certified Testers:</span>
+                        <span className="text-blue-600 text-sm font-black">{testerCount} Testers</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <input 
+                          type="range" 
+                          min={5} 
+                          max={100} 
+                          step={5}
+                          value={testerCount}
+                          onChange={(e) => { setTesterCount(Number(e.target.value)); setSelectedPreset('custom'); }}
+                          className="w-full accent-blue-600 cursor-pointer h-2 bg-zinc-200 rounded-lg"
+                        />
+                        <input 
+                          type="number"
+                          min={1}
+                          max={500}
+                          value={testerCount}
+                          onChange={(e) => { setTesterCount(Math.max(1, Number(e.target.value))); setSelectedPreset('custom'); }}
+                          className="w-16 px-2 py-1 bg-white border border-zinc-300 rounded-xl text-xs font-bold text-center font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-xs mb-1.5 font-bold">
+                        <span className="text-zinc-600">Testing Duration:</span>
+                        <span className="text-indigo-600 text-sm font-black">{durationDays} Days</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2">
+                        {[7, 14, 21, 30].map(d => (
+                          <button
+                            key={d}
+                            type="button"
+                            onClick={() => { setDurationDays(d); setSelectedPreset('custom'); }}
+                            className={`py-1.5 text-xs font-bold rounded-xl border transition ${
+                              durationDays === d 
+                                ? 'bg-indigo-600 text-white border-indigo-600 shadow' 
+                                : 'bg-white text-zinc-700 border-zinc-300 hover:bg-zinc-100'
+                            }`}
+                          >
+                            {d} Days
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-zinc-200 flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Total Campaign Cost</p>
+                        <p className="text-xs text-zinc-600">{testerCount} testers × {durationDays} days</p>
+                      </div>
+                      <div className="text-right">
+                        <div className="flex items-center gap-1 text-base font-black text-amber-600">
+                          <Coins className="w-4 h-4 text-amber-500" />
+                          <span>{calculatedCost.toLocaleString()} Coins</span>
+                        </div>
+                        <p className="text-[10px] text-emerald-600 font-bold">≈ ${(calculatedCost / 100).toFixed(2)} USD</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex gap-3">
@@ -315,7 +449,7 @@ export default function CustomerCampaigns() {
                     disabled={!fetchedData}
                     className="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl transition shadow-lg shadow-blue-600/20 disabled:opacity-40"
                   >
-                    Launch Campaign (2,000 Coins)
+                    Launch Campaign ({calculatedCost.toLocaleString()} Coins)
                   </button>
                 </div>
               </div>
