@@ -1,19 +1,20 @@
+'use client';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import CustomerLayout from '@/components/CustomerLayout';
-import { CreditCard, Download, ExternalLink, ShieldCheck, Coins, Upload } from 'lucide-react';
+import { CreditCard, Download, ExternalLink, ShieldCheck, Coins, Upload, Receipt } from 'lucide-react';
 import { useState } from 'react';
 
 export default function CustomerBilling() {
   const [showDeposit, setShowDeposit] = useState(false);
 
   const invoices = [
-    { id: 'INV-2023-001', date: 'Oct 24, 2023', amount: '$50.00 (5,000 🪙)', status: 'Paid' },
-    { id: 'INV-2023-002', date: 'Sep 24, 2023', amount: '$100.00 (10,000 🪙)', status: 'Paid' },
-    { id: 'INV-2023-003', date: 'Aug 24, 2023', amount: '$150.00 (15,000 🪙)', status: 'Paid' },
+    { id: 'INV-2023-001', desc: 'Bought 5,000 Coins', date: 'Oct 24, 2023', amount: '$50.00 (5,000 🪙)', status: 'Paid' },
+    { id: 'INV-2023-002', desc: 'Bought 10,000 Coins', date: 'Sep 24, 2023', amount: '$100.00 (10,000 🪙)', status: 'Paid' },
+    { id: 'INV-2023-003', desc: 'Bought 15,000 Coins', date: 'Aug 24, 2023', amount: '$150.00 (15,000 🪙)', status: 'Paid' },
   ];
 
   return (
-    <ProtectedRoute allowedRoles={['customer']}>
+    <ProtectedRoute allowedRoles={['customer', 'tester', 'earner']}>
       <CustomerLayout>
         <div className="space-y-6">
           <div>

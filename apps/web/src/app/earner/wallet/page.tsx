@@ -1,7 +1,7 @@
 'use client';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import EarnerLayout from '@/components/EarnerLayout';
-import { ArrowUpRight, Clock, Coins, Users } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Clock, Coins, Users } from 'lucide-react';
 import { useState } from 'react';
 
 export default function EarnerWallet() {
@@ -14,7 +14,7 @@ export default function EarnerWallet() {
   ];
 
   return (
-    <ProtectedRoute allowedRoles={['earner']}>
+    <ProtectedRoute allowedRoles={['customer', 'tester', 'earner']}>
       <EarnerLayout>
         <div className="space-y-6">
           <div>

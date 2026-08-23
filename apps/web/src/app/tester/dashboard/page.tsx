@@ -58,7 +58,7 @@ export default function UnifiedDashboard() {
   ];
 
   return (
-    <ProtectedRoute allowedRoles={['tester', 'customer', 'earner', 'user']}>
+    <ProtectedRoute allowedRoles={['tester', 'customer', 'earner']}>
       <UserLayout>
         <div className="space-y-8">
           {/* Welcome & Unified Role Header Banner */}
