@@ -21,10 +21,11 @@ export default function Login() {
       
       if (userDoc.exists()) {
         const userData = userDoc.data() as User;
-        if (userData.role === 'admin' || userData.role === 'super_admin') router.push('/admin/dashboard');
-        else if (userData.role === 'customer') router.push('/customer/dashboard');
-        else if (userData.role === 'tester') router.push('/tester/dashboard');
-        else if (userData.role === 'earner') router.push('/earner/dashboard');
+        if (userData.role === 'admin' || userData.role === 'super_admin') {
+          router.push('/admin/dashboard');
+        } else {
+          router.push('/tester/dashboard');
+        }
       } else {
         setError('User profile not found.');
       }

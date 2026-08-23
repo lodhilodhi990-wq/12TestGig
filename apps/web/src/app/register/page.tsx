@@ -40,9 +40,7 @@ export default function Register() {
 
       await setDoc(doc(db, 'users', userCredential.user.uid), userDoc);
       
-      if (role === 'customer') router.push('/customer/dashboard');
-      else if (role === 'tester') router.push('/tester/dashboard');
-      else if (role === 'earner') router.push('/earner/dashboard');
+      router.push('/tester/dashboard');
       
     } catch (err: any) {
       setError(err.message || 'Failed to register');
