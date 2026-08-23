@@ -80,23 +80,35 @@ export default function CustomerProjects() {
     }
   };
 
-  // Dynamic Cost Calculator
-  const calculatedCost = Math.round((testerCount * durationDays * (dailyRate / 14)) + (testerCount * 50));
+  // 100% Accurate Cost Calculation Engine
+  const calculateCost = () => {
+    if (selectedPreset === 'playstore' && testerCount === 20 && durationDays === 14) {
+      return rates.base20TesterCost || 2000;
+    }
+    if (selectedPreset === 'quick' && testerCount === 10 && durationDays === 7) {
+      return 800;
+    }
+    if (selectedPreset === 'pro' && testerCount === 30 && durationDays === 14) {
+      return 3500;
+    }
+    const base20 = rates.base20TesterCost || 2000;
+    const costPerTesterDay = base20 / (20 * 14);
+    return Math.round(testerCount * durationDays * costPerTesterDay);
+  };
+
+  const calculatedCost = calculateCost();
 
   const applyPreset = (preset: 'playstore' | 'quick' | 'pro' | 'custom') => {
     setSelectedPreset(preset);
     if (preset === 'playstore') {
       setTesterCount(20);
       setDurationDays(14);
-      setDailyRate(100);
     } else if (preset === 'quick') {
       setTesterCount(10);
       setDurationDays(7);
-      setDailyRate(100);
     } else if (preset === 'pro') {
       setTesterCount(30);
       setDurationDays(14);
-      setDailyRate(150);
     }
   };
 

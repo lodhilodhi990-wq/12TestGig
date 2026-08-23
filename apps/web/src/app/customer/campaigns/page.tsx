@@ -17,6 +17,7 @@ import {
   Sliders
 } from 'lucide-react';
 import Link from 'next/link';
+import { fetchLivePricingRates, DEFAULT_PRICING_RATES, PricingRates } from '@/lib/pricingRates';
 
 interface Campaign {
   id: number;
@@ -33,6 +34,7 @@ interface Campaign {
 }
 
 export default function CustomerCampaigns() {
+  const [rates, setRates] = useState<PricingRates>(DEFAULT_PRICING_RATES);
   const [showLaunchModal, setShowLaunchModal] = useState(false);
   const [playStoreUrl, setPlayStoreUrl] = useState('');
   const [isFetching, setIsFetching] = useState(false);
@@ -42,12 +44,13 @@ export default function CustomerCampaigns() {
   // Customizable settings
   const [testerCount, setTesterCount] = useState<number>(20);
   const [durationDays, setDurationDays] = useState<number>(14);
-  const [dailyRate, setDailyRate] = useState<number>(100);
   const [selectedPreset, setSelectedPreset] = useState<'playstore' | 'quick' | 'pro' | 'custom'>('playstore');
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
 
   useEffect(() => {
+    fetchLivePricingRates().then(data => setRates(data));
+
     try {
       const saved = localStorage.getItem('user_apps_campaigns');
       if (saved) {
@@ -67,22 +70,35 @@ export default function CustomerCampaigns() {
     }
   };
 
-  const calculatedCost = Math.round((testerCount * durationDays * (dailyRate / 14)) + (testerCount * 50));
+  // 100% Accurate Cost Calculation Engine
+  const calculateCost = () => {
+    if (selectedPreset === 'playstore' && testerCount === 20 && durationDays === 14) {
+      return rates.base20TesterCost || 2000;
+    }
+    if (selectedPreset === 'quick' && testerCount === 10 && durationDays === 7) {
+      return 800;
+    }
+    if (selectedPreset === 'pro' && testerCount === 30 && durationDays === 14) {
+      return 3500;
+    }
+    const base20 = rates.base20TesterCost || 2000;
+    const costPerTesterDay = base20 / (20 * 14);
+    return Math.round(testerCount * durationDays * costPerTesterDay);
+  };
+
+  const calculatedCost = calculateCost();
 
   const applyPreset = (preset: 'playstore' | 'quick' | 'pro' | 'custom') => {
     setSelectedPreset(preset);
     if (preset === 'playstore') {
       setTesterCount(20);
       setDurationDays(14);
-      setDailyRate(100);
     } else if (preset === 'quick') {
       setTesterCount(10);
       setDurationDays(7);
-      setDailyRate(100);
     } else if (preset === 'pro') {
       setTesterCount(30);
       setDurationDays(14);
-      setDailyRate(150);
     }
   };
 
@@ -337,7 +353,7 @@ export default function CustomerCampaigns() {
                       >
                         <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block">Google Play Req</span>
                         <p className="font-extrabold text-xs mt-0.5">20 Testers</p>
-                        <p className="text-[11px] text-zinc-500 font-medium">14 Days • 2,000 Coins</p>
+                        <p className="text-[11px] text-zinc-500 font-medium">14 Days • {(rates.base20TesterCost || 2000).toLocaleString()} Coins</p>
                       </button>
 
                       <button
@@ -431,7 +447,9 @@ export default function CustomerCampaigns() {
                           <Coins className="w-4 h-4 text-amber-500" />
                           <span>{calculatedCost.toLocaleString()} Coins</span>
                         </div>
-                        <p className="text-[10px] text-emerald-600 font-bold">≈ ${(calculatedCost / 100).toFixed(2)} USD</p>
+                        <p className="text-[10px] text-emerald-600 font-bold">
+                          ≈ ${(calculatedCost / (rates.coinsPerUsd || 100)).toFixed(2)} USD (Rs {Math.round((calculatedCost / (rates.coinsPerUsd || 100)) * (rates.pkrPerUsd || 280)).toLocaleString()} PKR)
+                        </p>
                       </div>
                     </div>
                   </div>
