@@ -12,24 +12,36 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 export default function Settings() {
+  const getInitialConfig = () => {
+    try {
+      const saved = localStorage.getItem('admin_pricing_rates');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error(e);
+    }
+    return null;
+  };
+
+  const initial = getInitialConfig();
+
   // Coin Exchange Rates (1 Coin Kitna Ka Hai?)
-  const [coinsPerUsd, setCoinsPerUsd] = useState<number>(100); // 100 Coins = $1.00 USD (1 Coin = $0.01)
-  const [pkrPerUsd, setPkrPerUsd] = useState<number>(280);     // $1 = PKR 280 (1 Coin = PKR 2.80)
-  const [minDepositUsd, setMinDepositUsd] = useState<number>(5); // Min $5 (500 Coins)
-  const [minWithdrawCoins, setMinWithdrawCoins] = useState<number>(1000); // Min 1,000 Coins ($10)
+  const [coinsPerUsd, setCoinsPerUsd] = useState<number>(initial?.coinsPerUsd ?? 100);
+  const [pkrPerUsd, setPkrPerUsd] = useState<number>(initial?.pkrPerUsd ?? 280);
+  const [minDepositUsd, setMinDepositUsd] = useState<number>(initial?.minDepositUsd ?? 5);
+  const [minWithdrawCoins, setMinWithdrawCoins] = useState<number>(initial?.minWithdrawCoins ?? 1000);
 
   // App Testing Pricing Rules (App Test Ke Liye Kitne Coin Chahiye?)
-  const [base20TesterCost, setBase20TesterCost] = useState<number>(2000); // 20 Testers x 14 Days = 2000 Coins
-  const [dailyTesterPayout, setDailyTesterPayout] = useState<number>(100); // Tester gets 100 Coins / day
-  const [completionBonus, setCompletionBonus] = useState<number>(600);    // Bonus after 14 days
-  const [platformFeePercent, setPlatformFeePercent] = useState<number>(20); // 20% platform profit
+  const [base20TesterCost, setBase20TesterCost] = useState<number>(initial?.base20TesterCost ?? 2000);
+  const [dailyTesterPayout, setDailyTesterPayout] = useState<number>(initial?.dailyTesterPayout ?? 100);
+  const [completionBonus, setCompletionBonus] = useState<number>(initial?.completionBonus ?? 600);
+  const [platformFeePercent, setPlatformFeePercent] = useState<number>(initial?.platformFeePercent ?? 20);
 
   // Receiving Accounts
-  const [easypaisaNumber, setEasypaisaNumber] = useState('0300-1234567');
-  const [easypaisaTitle, setEasypaisaTitle] = useState('Umar Hayat');
-  const [bankDetails, setBankDetails] = useState('Meezan Bank, Acc: 1234567890 (Umar Hayat)');
-  const [payoneerEmail, setPayoneerEmail] = useState('pay@12testgig.com');
-  const [usdtAddress, setUsdtAddress] = useState('USDT TRC20: T9yD14Nj9yDbv... (Binance)');
+  const [easypaisaNumber, setEasypaisaNumber] = useState(initial?.easypaisaNumber ?? '0300-1234567');
+  const [easypaisaTitle, setEasypaisaTitle] = useState(initial?.easypaisaTitle ?? 'Umar Hayat');
+  const [bankDetails, setBankDetails] = useState(initial?.bankDetails ?? 'Meezan Bank, Acc: 1234567890 (Umar Hayat)');
+  const [payoneerEmail, setPayoneerEmail] = useState(initial?.payoneerEmail ?? 'pay@12testgig.com');
+  const [usdtAddress, setUsdtAddress] = useState(initial?.usdtAddress ?? 'USDT TRC20: T9yD14Nj9yDbv... (Binance)');
 
   // Simulator State
   const [simTesters, setSimTesters] = useState<number>(20);
@@ -38,26 +50,48 @@ export default function Settings() {
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
-    // Load config from Firestore if available, otherwise localStorage
     const loadConfig = async () => {
+      // First load from localStorage
+      const cached = localStorage.getItem('admin_pricing_rates');
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          applyConfig(parsed);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      // Then load from Firestore
       try {
         const docRef = doc(db, 'platform_settings', 'pricing_rates');
         const snap = await getDoc(docRef);
         if (snap.exists()) {
           const d = snap.data();
-          if (d.coinsPerUsd) setCoinsPerUsd(d.coinsPerUsd);
-          if (d.pkrPerUsd) setPkrPerUsd(d.pkrPerUsd);
-          if (d.base20TesterCost) setBase20TesterCost(d.base20TesterCost);
-          if (d.dailyTesterPayout) setDailyTesterPayout(d.dailyTesterPayout);
-          if (d.platformFeePercent) setPlatformFeePercent(d.platformFeePercent);
-          if (d.easypaisaNumber) setEasypaisaNumber(d.easypaisaNumber);
-          if (d.bankDetails) setBankDetails(d.bankDetails);
-          if (d.payoneerEmail) setPayoneerEmail(d.payoneerEmail);
+          applyConfig(d);
+          localStorage.setItem('admin_pricing_rates', JSON.stringify(d));
         }
       } catch (err) {
-        console.warn('Using local rates config', err);
+        console.warn('Firestore load', err);
       }
     };
+
+    const applyConfig = (d: any) => {
+      if (d.coinsPerUsd !== undefined) setCoinsPerUsd(Number(d.coinsPerUsd));
+      if (d.pkrPerUsd !== undefined) setPkrPerUsd(Number(d.pkrPerUsd));
+      if (d.minDepositUsd !== undefined) setMinDepositUsd(Number(d.minDepositUsd));
+      if (d.minWithdrawCoins !== undefined) setMinWithdrawCoins(Number(d.minWithdrawCoins));
+      if (d.base20TesterCost !== undefined) setBase20TesterCost(Number(d.base20TesterCost));
+      if (d.dailyTesterPayout !== undefined) setDailyTesterPayout(Number(d.dailyTesterPayout));
+      if (d.completionBonus !== undefined) setCompletionBonus(Number(d.completionBonus));
+      if (d.platformFeePercent !== undefined) setPlatformFeePercent(Number(d.platformFeePercent));
+      if (d.easypaisaNumber !== undefined) setEasypaisaNumber(String(d.easypaisaNumber));
+      if (d.easypaisaTitle !== undefined) setEasypaisaTitle(String(d.easypaisaTitle));
+      if (d.bankDetails !== undefined) setBankDetails(String(d.bankDetails));
+      if (d.payoneerEmail !== undefined) setPayoneerEmail(String(d.payoneerEmail));
+      if (d.usdtAddress !== undefined) setUsdtAddress(String(d.usdtAddress));
+    };
+
     loadConfig();
   }, []);
 
@@ -66,37 +100,40 @@ export default function Settings() {
     setSaveSuccess(false);
 
     const payload = {
-      coinsPerUsd,
-      pkrPerUsd,
-      oneCoinUsd: 1 / coinsPerUsd,
-      oneCoinPkr: pkrPerUsd / coinsPerUsd,
-      minDepositUsd,
-      minWithdrawCoins,
-      base20TesterCost,
-      dailyTesterPayout,
-      completionBonus,
-      platformFeePercent,
-      easypaisaNumber,
-      easypaisaTitle,
-      bankDetails,
-      payoneerEmail,
-      usdtAddress,
+      coinsPerUsd: Number(coinsPerUsd),
+      pkrPerUsd: Number(pkrPerUsd),
+      oneCoinUsd: 1 / Number(coinsPerUsd),
+      oneCoinPkr: Number(pkrPerUsd) / Number(coinsPerUsd),
+      minDepositUsd: Number(minDepositUsd),
+      minWithdrawCoins: Number(minWithdrawCoins),
+      base20TesterCost: Number(base20TesterCost),
+      dailyTesterPayout: Number(dailyTesterPayout),
+      completionBonus: Number(completionBonus),
+      platformFeePercent: Number(platformFeePercent),
+      easypaisaNumber: String(easypaisaNumber),
+      easypaisaTitle: String(easypaisaTitle),
+      bankDetails: String(bankDetails),
+      payoneerEmail: String(payoneerEmail),
+      usdtAddress: String(usdtAddress),
       updatedAt: new Date().toISOString()
     };
 
+    // Save to localStorage immediately
+    try {
+      localStorage.setItem('admin_pricing_rates', JSON.stringify(payload));
+    } catch (e) {
+      console.error(e);
+    }
+
+    // Save to Firestore
     try {
       await setDoc(doc(db, 'platform_settings', 'pricing_rates'), payload, { merge: true });
-      localStorage.setItem('admin_pricing_rates', JSON.stringify(payload));
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3500);
     } catch (e: any) {
-      console.error(e);
-      // Fallback local save
-      localStorage.setItem('admin_pricing_rates', JSON.stringify(payload));
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3500);
+      console.warn('Saved to local storage, firestore warning', e);
     } finally {
       setIsSaving(false);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3500);
     }
   };
 
