@@ -1,154 +1,397 @@
 'use client';
+import React, { useState } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import TesterLayout from '@/components/TesterLayout';
-import { Play, CheckCircle2, AlertCircle } from 'lucide-react';
-import { useState } from 'react';
+import UserLayout from '@/components/UserLayout';
+import { 
+  Play, 
+  CheckCircle2, 
+  Clock, 
+  Coins, 
+  Smartphone, 
+  ExternalLink, 
+  Star, 
+  AlertCircle, 
+  Upload, 
+  ShieldCheck, 
+  ChevronRight, 
+  Sparkles,
+  Info,
+  Bug
+} from 'lucide-react';
+
+interface TestItem {
+  id: number;
+  name: string;
+  packageId: string;
+  category: string;
+  icon: string;
+  apkSize: string;
+  totalReward: string;
+  dailyReward: string;
+  completionBonus: string;
+  completedDays: number;
+  totalDays: number;
+  status: 'In Progress' | 'Action Needed' | 'Completed';
+  playStoreUrl: string;
+  instructions: string;
+}
 
 export default function MyTests() {
-  const [activeTab, setActiveTab] = useState('active');
-  const [selectedTask, setSelectedTask] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<'my_tests' | 'explore'>('my_tests');
+  const [selectedTask, setSelectedTask] = useState<TestItem | null>(null);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackText, setFeedbackText] = useState('');
 
-  const activeTests = [
-    { id: 1, name: 'Fitness Tracker Pro', daysLeft: 4, status: 'In Progress', reward: '1,500 🪙', completedTasks: 9, totalTasks: 14 },
-    { id: 2, name: 'Language Learner', daysLeft: 12, status: 'Just Started', reward: '2,000 🪙', completedTasks: 2, totalTasks: 14 },
+  const [activeTests, setActiveTests] = useState<TestItem[]>([
+    { 
+      id: 1, 
+      name: 'Fitness Tracker Pro', 
+      packageId: 'com.fitnesstracker.pro', 
+      category: 'Health & Fitness',
+      icon: '🏋️',
+      apkSize: '28 MB',
+      totalReward: '2,000 🪙', 
+      dailyReward: '100 🪙/day',
+      completionBonus: '600 🪙 bonus',
+      completedDays: 10, 
+      totalDays: 14,
+      status: 'Action Needed',
+      playStoreUrl: 'https://play.google.com/store/apps/details?id=com.fitnesstracker.pro',
+      instructions: 'Open the app daily, create 1 workout entry, and test heart rate monitor tab for 2 minutes.'
+    },
+    { 
+      id: 2, 
+      name: 'Language Learner AI', 
+      packageId: 'com.ai.languagelearner', 
+      category: 'Education & AI',
+      icon: '🌐',
+      apkSize: '42 MB',
+      totalReward: '2,500 🪙', 
+      dailyReward: '120 🪙/day',
+      completionBonus: '820 🪙 bonus',
+      completedDays: 2, 
+      totalDays: 14,
+      status: 'In Progress',
+      playStoreUrl: 'https://play.google.com/store/apps/details?id=com.ai.languagelearner',
+      instructions: 'Complete 1 daily Spanish or French conversation lesson and verify voice audio playback.'
+    },
+  ]);
+
+  const exploreApps: TestItem[] = [
+    {
+      id: 3,
+      name: 'Crypto Wallet Manager',
+      packageId: 'com.cryptowallet.app',
+      category: 'Finance & Web3',
+      icon: '🔐',
+      apkSize: '35 MB',
+      totalReward: '2,500 🪙',
+      dailyReward: '120 🪙/day',
+      completionBonus: '820 🪙 bonus',
+      completedDays: 0,
+      totalDays: 14,
+      status: 'In Progress',
+      playStoreUrl: 'https://play.google.com/store/apps/details?id=com.cryptowallet.app',
+      instructions: 'Create a test wallet using mnemonic words, check balance tab, and test dark mode toggle.'
+    },
+    {
+      id: 4,
+      name: 'QuickExpense Budget Tracker',
+      packageId: 'com.quickexpense.finance',
+      category: 'Finance',
+      icon: '📊',
+      apkSize: '16 MB',
+      totalReward: '1,800 🪙',
+      dailyReward: '100 🪙/day',
+      completionBonus: '400 🪙 bonus',
+      completedDays: 0,
+      totalDays: 14,
+      status: 'In Progress',
+      playStoreUrl: 'https://play.google.com/store/apps/details?id=com.quickexpense.finance',
+      instructions: 'Add 2 daily expenses, test category creation, and verify export to PDF/Excel.'
+    },
+    {
+      id: 5,
+      name: 'HabitHero Daily Planner',
+      packageId: 'com.habithero.app',
+      category: 'Productivity',
+      icon: '⭐',
+      apkSize: '22 MB',
+      totalReward: '1,500 🪙',
+      dailyReward: '80 🪙/day',
+      completionBonus: '380 🪙 bonus',
+      completedDays: 0,
+      totalDays: 14,
+      status: 'In Progress',
+      playStoreUrl: 'https://play.google.com/store/apps/details?id=com.habithero.app',
+      instructions: 'Set 3 daily goals, mark them checked, and verify morning alarm notification fires on time.'
+    },
   ];
 
-  const completedTests = [
-    { id: 3, name: 'Meditation App', date: '2023-10-15', reward: '1,200 🪙', status: 'Paid' },
-  ];
+  const handleClaimToday = (test: TestItem) => {
+    setSelectedTask(test);
+    setShowFeedbackModal(true);
+  };
 
-  const handleStartTask = (id: number) => {
-    setSelectedTask(id);
+  const submitDailyLog = () => {
+    if (!selectedTask) return;
+    setActiveTests(prev => prev.map(t => t.id === selectedTask.id ? { ...t, completedDays: Math.min(t.totalDays, t.completedDays + 1), status: 'In Progress' } : t));
+    setShowFeedbackModal(false);
+    setFeedbackText('');
+    alert(`🎉 Day ${selectedTask.completedDays + 1} check-in verified! +${selectedTask.dailyReward} added to your wallet.`);
   };
 
   return (
-    <ProtectedRoute allowedRoles={['tester']}>
-      <TesterLayout>
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-2xl font-bold text-zinc-900">My Tests</h1>
-            <p className="text-zinc-500 mt-1">Manage your active assignments and daily testing tasks.</p>
+    <ProtectedRoute allowedRoles={['tester', 'customer', 'earner']}>
+      <UserLayout>
+        <div className="space-y-8 font-sans">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-black text-zinc-900 tracking-tight flex items-center gap-2.5">
+                <Smartphone className="w-6 h-6 text-blue-600" />
+                Testing Assignments & Google Play Opt-Ins
+              </h1>
+              <p className="text-zinc-500 text-xs md:text-sm mt-1">
+                Participate in 14-day closed test tracks, open apps daily for 2 minutes, and earn coins.
+              </p>
+            </div>
+
+            {/* Tab switcher */}
+            <div className="flex items-center p-1 bg-zinc-200/80 rounded-2xl">
+              <button 
+                onClick={() => setActiveTab('my_tests')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  activeTab === 'my_tests' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-600 hover:text-zinc-900'
+                }`}
+              >
+                My Active Tests ({activeTests.length})
+              </button>
+              <button 
+                onClick={() => setActiveTab('explore')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  activeTab === 'explore' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-600 hover:text-zinc-900'
+                }`}
+              >
+                Explore New Apps ({exploreApps.length})
+              </button>
+            </div>
           </div>
 
-          {/* Tabs */}
-          <div className="flex items-center gap-4 border-b border-zinc-200">
-            <button 
-              onClick={() => setActiveTab('active')}
-              className={`pb-3 font-medium text-sm transition-colors relative ${activeTab === 'active' ? 'text-blue-600' : 'text-zinc-500 hover:text-zinc-900'}`}
-            >
-              Active Tests
-              {activeTab === 'active' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-t-full"></div>}
-            </button>
-            <button 
-              onClick={() => setActiveTab('completed')}
-              className={`pb-3 font-medium text-sm transition-colors relative ${activeTab === 'completed' ? 'text-blue-600' : 'text-zinc-500 hover:text-zinc-900'}`}
-            >
-              Completed Tests
-              {activeTab === 'completed' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-t-full"></div>}
-            </button>
-          </div>
-
-          {/* Tab Content */}
-          {activeTab === 'active' ? (
-            <div className="space-y-4">
+          {/* TAB 1: MY ACTIVE TESTS */}
+          {activeTab === 'my_tests' ? (
+            <div className="space-y-6">
               {activeTests.map(test => (
-                <div key={test.id} className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                      <h2 className="text-lg font-bold text-zinc-900">{test.name}</h2>
-                      <div className="flex items-center gap-3 mt-1 text-sm">
-                        <span className="text-emerald-600 font-semibold">{test.reward} Reward</span>
-                        <span className="text-zinc-300">•</span>
-                        <span className="text-zinc-500">{test.daysLeft} days remaining</span>
+                <div key={test.id} className="bg-white rounded-3xl border border-zinc-200 shadow-sm p-6 md:p-8 hover:border-blue-300 transition">
+                  <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+                    {/* App Identity & Pro Details */}
+                    <div className="flex items-start gap-4">
+                      <div className="w-16 h-16 rounded-2xl bg-zinc-100 border border-zinc-200 flex items-center justify-center text-3xl shadow-sm shrink-0">
+                        {test.icon}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h2 className="text-lg font-black text-zinc-900">{test.name}</h2>
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-100">
+                            {test.category}
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-500 font-mono mt-0.5">{test.packageId}</p>
+                        
+                        {/* Coin Reward Pill Breakdown */}
+                        <div className="flex flex-wrap items-center gap-2 mt-3 text-xs">
+                          <span className="inline-flex items-center gap-1 font-extrabold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200/60">
+                            <Coins className="w-3.5 h-3.5" /> Total: {test.totalReward}
+                          </span>
+                          <span className="text-zinc-600 bg-zinc-100 px-2.5 py-1 rounded-xl font-semibold">
+                            {test.dailyReward}
+                          </span>
+                          <span className="text-amber-700 bg-amber-50 px-2.5 py-1 rounded-xl font-semibold border border-amber-100">
+                            + {test.completionBonus}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                    <button 
-                      onClick={() => handleStartTask(test.id)}
-                      className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg flex items-center justify-center gap-2 transition-colors"
-                    >
-                      <Play className="w-4 h-4" /> Start Daily Task
-                    </button>
+
+                    {/* Action Triggers */}
+                    <div className="flex flex-wrap lg:flex-col items-end gap-3 shrink-0">
+                      <button 
+                        onClick={() => handleClaimToday(test)}
+                        className={`px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition shadow-md ${
+                          test.status === 'Action Needed' 
+                            ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/20' 
+                            : 'bg-zinc-900 hover:bg-black text-white'
+                        }`}
+                      >
+                        <Play className="w-4 h-4" /> Start Today's Check-in
+                      </button>
+
+                      <a 
+                        href={test.playStoreUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-3.5 py-2 rounded-xl text-xs font-bold text-zinc-600 bg-zinc-100 hover:bg-zinc-200 flex items-center gap-1.5 transition"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" /> Open Google Play Opt-in
+                      </a>
+                    </div>
                   </div>
 
-                  <div className="mt-6">
-                    <div className="flex items-center justify-between text-sm mb-2">
-                      <span className="font-medium text-zinc-700">Progress</span>
-                      <span className="text-zinc-500">{test.completedTasks} / {test.totalTasks} days completed</span>
+                  {/* Testing Instructions Accordion */}
+                  <div className="mt-5 p-4 rounded-2xl bg-zinc-50 border border-zinc-200/80 text-xs">
+                    <p className="font-bold text-zinc-800 flex items-center gap-1.5 mb-1">
+                      <Info className="w-3.5 h-3.5 text-blue-600" /> Daily Testing Task:
+                    </p>
+                    <p className="text-zinc-600 leading-relaxed">{test.instructions}</p>
+                  </div>
+
+                  {/* 14-Day Visual Tracker Calendar */}
+                  <div className="mt-6 pt-6 border-t border-zinc-100">
+                    <div className="flex items-center justify-between text-xs mb-3">
+                      <span className="font-bold text-zinc-900">
+                        14-Day Test Track: <strong className="text-blue-600">{test.completedDays} / {test.totalDays} Days Verified</strong>
+                      </span>
+                      <span className="text-zinc-500 font-medium">{test.totalDays - test.completedDays} days until bonus payout</span>
                     </div>
-                    <div className="w-full bg-zinc-100 rounded-full h-2.5 overflow-hidden">
-                      <div 
-                        className="bg-blue-600 h-2.5 rounded-full" 
-                        style={{ width: `${(test.completedTasks / test.totalTasks) * 100}%` }}
-                      ></div>
+
+                    <div className="grid grid-cols-7 sm:grid-cols-14 gap-2">
+                      {Array.from({ length: 14 }).map((_, index) => {
+                        const dayNum = index + 1;
+                        const isDone = dayNum <= test.completedDays;
+                        const isCurrent = dayNum === test.completedDays + 1;
+                        return (
+                          <div 
+                            key={dayNum}
+                            className={`p-2 rounded-xl border text-center flex flex-col items-center justify-center transition-all ${
+                              isDone 
+                                ? 'bg-emerald-50 border-emerald-200 text-emerald-700 font-bold' 
+                                : isCurrent 
+                                ? 'bg-blue-600 border-blue-600 text-white font-black shadow-md shadow-blue-500/20 scale-105' 
+                                : 'bg-zinc-50 border-zinc-200 text-zinc-400 font-medium'
+                            }`}
+                          >
+                            <span className="text-[9px] uppercase tracking-wider block">D{dayNum}</span>
+                            {isDone ? (
+                              <CheckCircle2 className="w-3.5 h-3.5 mt-0.5" />
+                            ) : (
+                              <span className="text-[10px] font-bold mt-0.5">🪙</span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-zinc-50 border-b border-zinc-200 text-zinc-500">
-                  <tr>
-                    <th className="px-6 py-4 font-medium">App Name</th>
-                    <th className="px-6 py-4 font-medium">Completion Date</th>
-                    <th className="px-6 py-4 font-medium">Reward</th>
-                    <th className="px-6 py-4 font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-100">
-                  {completedTests.map(test => (
-                    <tr key={test.id} className="hover:bg-zinc-50/50">
-                      <td className="px-6 py-4 font-medium text-zinc-900">{test.name}</td>
-                      <td className="px-6 py-4 text-zinc-500">{test.date}</td>
-                      <td className="px-6 py-4 text-emerald-600 font-medium">{test.reward}</td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          {test.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            /* TAB 2: EXPLORE NEW APPS TO TEST */
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {exploreApps.map(app => (
+                <div key={app.id} className="bg-white rounded-3xl border border-zinc-200 shadow-sm p-6 flex flex-col justify-between hover:border-blue-300 hover:shadow-md transition">
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="w-14 h-14 bg-zinc-100 border border-zinc-200 rounded-2xl flex items-center justify-center text-3xl shadow-sm">
+                        {app.icon}
+                      </div>
+                      <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-xs font-black rounded-full border border-emerald-200">
+                        {app.totalReward}
+                      </span>
+                    </div>
+
+                    <h3 className="font-extrabold text-base text-zinc-900">{app.name}</h3>
+                    <p className="text-xs text-zinc-500 font-mono mt-0.5">{app.packageId}</p>
+                    <p className="text-xs text-zinc-600 mt-2.5 leading-relaxed">{app.instructions}</p>
+
+                    <div className="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-between text-xs text-zinc-500 font-medium">
+                      <span>Daily: <strong>{app.dailyReward}</strong></span>
+                      <span>APK: <strong>{app.apkSize}</strong></span>
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={() => {
+                      setActiveTests([app, ...activeTests]);
+                      setActiveTab('my_tests');
+                      alert(`🎉 You joined the 14-day test team for ${app.name}!`);
+                    }}
+                    className="mt-5 w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md shadow-blue-600/20"
+                  >
+                    Join 14-Day Test Track <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
             </div>
           )}
 
-        </div>
+          {/* Daily Feedback / Task Modal */}
+          {showFeedbackModal && selectedTask && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 md:p-8 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-2xl shadow-sm">
+                      {selectedTask.icon}
+                    </div>
+                    <div>
+                      <h3 className="text-base font-black text-zinc-900">
+                        Day {selectedTask.completedDays + 1} Check-in: {selectedTask.name}
+                      </h3>
+                      <p className="text-xs text-zinc-500">Reward: {selectedTask.dailyReward}</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setShowFeedbackModal(false)} className="text-zinc-400 hover:text-zinc-600 text-lg font-bold">✕</button>
+                </div>
 
-        {/* Task Modal */}
-        {selectedTask && (
-          <div className="fixed inset-0 bg-zinc-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
-              <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-4 mx-auto">
-                <Play className="w-6 h-6 ml-1" />
-              </div>
-              <h3 className="text-xl font-bold text-center text-zinc-900 mb-2">Ready to Start?</h3>
-              <p className="text-center text-zinc-500 mb-6">
-                Please ensure you keep the app open for at least 3 minutes to register your daily activity. Our system will track it automatically.
-              </p>
-              <div className="flex gap-3">
-                <button 
-                  onClick={() => setSelectedTask(null)}
-                  className="flex-1 px-4 py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-medium rounded-xl transition-colors"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={() => {
-                    alert('Task started! Tracking initiated.');
-                    setSelectedTask(null);
-                  }}
-                  className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors"
-                >
-                  Open App
-                </button>
+                <div className="space-y-4 mb-6">
+                  <div className="p-3.5 bg-blue-50 rounded-2xl border border-blue-100 text-xs text-blue-900">
+                    <p className="font-bold mb-1">Step 1: Open app for 2-3 minutes</p>
+                    <p className="text-blue-800/80">Make sure you are opted into Google Play testing with your Google account.</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1.5">
+                      Today's Observations / Bug Feedback
+                    </label>
+                    <textarea 
+                      rows={3} 
+                      value={feedbackText}
+                      onChange={(e) => setFeedbackText(e.target.value)}
+                      placeholder="e.g. Tested login flow, no crashes observed. UI is smooth on Android 14."
+                      className="w-full bg-zinc-50 border border-zinc-300 rounded-2xl p-3 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1.5">
+                      Upload Screenshot / Proof (Optional)
+                    </label>
+                    <div className="w-full border-2 border-dashed border-zinc-300 rounded-2xl p-4 flex flex-col items-center justify-center text-zinc-500 hover:bg-zinc-50 cursor-pointer transition">
+                      <Upload className="w-5 h-5 mb-1 text-zinc-400" />
+                      <span className="text-xs font-semibold">Attach screenshot proof</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => setShowFeedbackModal(false)}
+                    className="flex-1 px-4 py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-semibold text-xs rounded-xl transition"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={submitDailyLog}
+                    className="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl transition shadow-lg shadow-blue-600/20"
+                  >
+                    Submit & Claim Today's Coins
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </TesterLayout>
+          )}
+        </div>
+      </UserLayout>
     </ProtectedRoute>
   );
 }
