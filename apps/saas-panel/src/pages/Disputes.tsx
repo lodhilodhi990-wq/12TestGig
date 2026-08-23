@@ -1,4 +1,4 @@
-import { AlertTriangle, MessageSquare, CheckCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle } from 'lucide-react';
 
 export default function Disputes() {
   const disputes = [
