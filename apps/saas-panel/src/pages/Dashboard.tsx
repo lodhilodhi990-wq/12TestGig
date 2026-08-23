@@ -7,14 +7,14 @@ import { Link } from 'react-router-dom';
 export default function Dashboard() {
   const stats = [
     { title: 'Total Revenue (Deposits)', value: '$12,450.00', change: '+18.2%', isPositive: true, sub: '≈ PKR 3.48M' },
-    { title: 'Active Circulating Coins', value: '1,245,000 🪙', change: '+24.5%', isPositive: true, sub: 'Backed by Reserve' },
+    { title: 'Active Circulating Coins', value: '1,245,000 Coins', change: '+24.5%', isPositive: true, sub: 'Backed by Reserve' },
     { title: 'Live 14-Day Campaigns', value: '42 Apps', change: '+8 this week', isPositive: true, sub: '840 Active Testers' },
     { title: 'Flagged Scammers / Risk', value: '3 Users', change: '2 Banned Today', isPositive: false, sub: 'Trust Score < 30%' },
   ];
 
   const recentDeposits = [
-    { id: 'DEP-9021', user: 'Omar Farooq', amount: '$50.00', coins: '5,000 🪙', method: 'Easypaisa', status: 'Pending Review' },
-    { id: 'DEP-9020', user: 'Sarah Jenkins', amount: '$100.00', coins: '10,000 🪙', method: 'Meezan Bank', status: 'Pending Review' },
+    { id: 'DEP-9021', user: 'Omar Farooq', amount: '$50.00', coins: '5,000 Coins', method: 'Easypaisa', status: 'Pending Review' },
+    { id: 'DEP-9020', user: 'Sarah Jenkins', amount: '$100.00', coins: '10,000 Coins', method: 'Meezan Bank', status: 'Pending Review' },
   ];
 
   const flaggedAccounts = [

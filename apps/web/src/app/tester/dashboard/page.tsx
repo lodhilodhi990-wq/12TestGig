@@ -25,12 +25,20 @@ export default function UnifiedDashboard() {
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [showDeposit, setShowDeposit] = useState(false);
 
+  const [coinsBalance, setCoinsBalance] = useState<number>(0);
   const [activeTestingTasks, setActiveTestingTasks] = useState<any[]>([]);
   const [myAppCampaigns, setMyAppCampaigns] = useState<any[]>([]);
   const [availableAppsToTest, setAvailableAppsToTest] = useState<any[]>([]);
 
   useEffect(() => {
     try {
+      const savedBalance = localStorage.getItem('user_coins_balance');
+      if (savedBalance) {
+        setCoinsBalance(Number(savedBalance));
+      } else {
+        setCoinsBalance(0);
+      }
+
       const savedCampaigns = localStorage.getItem('user_apps_campaigns');
       if (savedCampaigns) {
         const parsed = JSON.parse(savedCampaigns);
@@ -53,10 +61,10 @@ export default function UnifiedDashboard() {
   };
 
   const metrics = [
-    { title: 'Total Coins', value: '15,000 Coins', sub: '≈ $150.00 USD (PKR 42,000)', icon: Coins, color: 'text-amber-500', bg: 'bg-amber-50' },
+    { title: 'Total Coins', value: `${coinsBalance.toLocaleString()} Coins`, sub: `≈ $${(coinsBalance / 100).toFixed(2)} USD`, icon: Coins, color: 'text-amber-500', bg: 'bg-amber-50' },
     { title: 'My Active Tests', value: `${activeTestingTasks.length} Apps`, sub: '14-Day Google Play Tracks', icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { title: 'My App Campaigns', value: `${myAppCampaigns.length} Apps`, sub: '20 Testers Assigned', icon: Rocket, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-    { title: 'Referral Earnings', value: '4,500 Coins', sub: '10% Lifetime Bonus', icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { title: 'My App Campaigns', value: `${myAppCampaigns.length} Apps`, sub: 'Testers Assigned', icon: Rocket, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+    { title: 'Referral Earnings', value: '0 Coins', sub: '10% Lifetime Bonus', icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
   ];
 
   return (
@@ -85,9 +93,9 @@ export default function UnifiedDashboard() {
                 <div className="bg-black/35 backdrop-blur-md p-4 rounded-2xl border border-white/15 flex flex-col items-start min-w-[240px]">
                   <p className="text-[11px] text-zinc-300 font-semibold tracking-wider uppercase">Available Balance</p>
                   <div className="flex items-baseline gap-2 mt-1">
-                    <span className="text-3xl font-black text-amber-300">15,000 <span className="text-sm font-bold">Coins</span></span>
+                    <span className="text-3xl font-black text-amber-300">{coinsBalance.toLocaleString()} <span className="text-sm font-bold">Coins</span></span>
                   </div>
-                  <p className="text-xs text-emerald-300 font-bold mt-0.5">≈ $150.00 USD (PKR 42,000)</p>
+                  <p className="text-xs text-emerald-300 font-bold mt-0.5">≈ ${(coinsBalance / 100).toFixed(2)} USD</p>
 
                   <div className="flex items-center gap-2 mt-3 w-full">
                     <button 

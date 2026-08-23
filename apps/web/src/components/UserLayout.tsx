@@ -39,6 +39,20 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const { logout, user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [coinsBalance, setCoinsBalance] = useState<number>(0);
+
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem('user_coins_balance');
+      if (saved) {
+        setCoinsBalance(Number(saved));
+      } else {
+        setCoinsBalance(0);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
 
   const sections: NavSection[] = [
     {
@@ -123,7 +137,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
               </div>
               <div>
                 <p className="text-[11px] text-zinc-400 font-medium tracking-wide uppercase">Your Balance</p>
-                <p className="text-xl font-bold">15,000 <span className="text-xs font-normal text-amber-400">Coins</span></p>
+                <p className="text-xl font-bold">{coinsBalance.toLocaleString()} <span className="text-xs font-normal text-amber-400">Coins</span></p>
               </div>
             </div>
             <Link 
@@ -134,7 +148,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
             </Link>
           </div>
           <div className="mt-2.5 pt-2 border-t border-zinc-800/80 flex justify-between text-[11px] text-zinc-400">
-            <span>≈ $150.00 USD</span>
+            <span>≈ ${(coinsBalance / 100).toFixed(2)} USD</span>
             <Link href="/customer/billing" className="text-blue-400 hover:text-blue-300 font-medium">+ Buy Coins</Link>
           </div>
         </div>
