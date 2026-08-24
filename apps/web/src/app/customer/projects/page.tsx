@@ -86,17 +86,19 @@ export default function CustomerProjects() {
 
   // 100% Accurate Cost Calculation Engine
   const calculateCost = () => {
-    if (selectedPreset === 'playstore' && testerCount === 20 && durationDays === 14) {
-      return rates.base20TesterCost || 2000;
+    if (selectedPreset === 'playstore' && testerCount === (rates.base20Testers || 20) && durationDays === (rates.base20Days || 14)) {
+      return rates.base20TesterCost ?? 200;
     }
-    if (selectedPreset === 'quick' && testerCount === 10 && durationDays === 7) {
-      return 800;
+    if (selectedPreset === 'quick' && testerCount === (rates.quickTesters || 10) && durationDays === (rates.quickDays || 7)) {
+      return rates.quickCoins ?? 100;
     }
-    if (selectedPreset === 'pro' && testerCount === 30 && durationDays === 14) {
-      return 3500;
+    if (selectedPreset === 'pro' && testerCount === (rates.proTesters || 30) && durationDays === (rates.proDays || 14)) {
+      return rates.proCoins ?? 350;
     }
-    const base20 = rates.base20TesterCost || 2000;
-    const costPerTesterDay = base20 / (20 * 14);
+    const baseCost = rates.base20TesterCost ?? 200;
+    const baseTesters = rates.base20Testers ?? 20;
+    const baseDays = rates.base20Days ?? 14;
+    const costPerTesterDay = baseCost / (baseTesters * baseDays);
     return Math.round(testerCount * durationDays * costPerTesterDay);
   };
 
@@ -105,14 +107,14 @@ export default function CustomerProjects() {
   const applyPreset = (preset: 'playstore' | 'quick' | 'pro' | 'custom') => {
     setSelectedPreset(preset);
     if (preset === 'playstore') {
-      setTesterCount(20);
-      setDurationDays(14);
+      setTesterCount(rates.base20Testers ?? 20);
+      setDurationDays(rates.base20Days ?? 14);
     } else if (preset === 'quick') {
-      setTesterCount(10);
-      setDurationDays(7);
+      setTesterCount(rates.quickTesters ?? 10);
+      setDurationDays(rates.quickDays ?? 7);
     } else if (preset === 'pro') {
-      setTesterCount(30);
-      setDurationDays(14);
+      setTesterCount(rates.proTesters ?? 30);
+      setDurationDays(rates.proDays ?? 14);
     }
   };
 
@@ -366,7 +368,8 @@ export default function CustomerProjects() {
                     <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                       <Award className="w-3.5 h-3.5 text-blue-600" /> Select Testing Package
                     </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {/* 1. Google Play Requirement */}
                       <button
                         type="button"
                         onClick={() => applyPreset('playstore')}
@@ -377,37 +380,43 @@ export default function CustomerProjects() {
                         }`}
                       >
                         <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block">Google Play Req</span>
-                        <p className="font-extrabold text-xs mt-0.5">20 Testers</p>
-                        <p className="text-[11px] text-zinc-500 font-medium">14 Days • 2,000 Coins</p>
+                        <p className="font-extrabold text-xs mt-0.5">{rates.base20Testers || 20} Testers</p>
+                        <p className="text-[11px] text-zinc-500 font-medium">{rates.base20Days || 14} Days • {(rates.base20TesterCost ?? 200).toLocaleString()} Coins</p>
                       </button>
 
-                      <button
-                        type="button"
-                        onClick={() => applyPreset('quick')}
-                        className={`p-3 rounded-2xl border text-left transition-all ${
-                          selectedPreset === 'quick' 
-                            ? 'bg-blue-50 border-blue-600 text-blue-900 shadow-sm ring-1 ring-blue-600' 
-                            : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100 text-zinc-700'
-                        }`}
-                      >
-                        <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider block">Quick Audit</span>
-                        <p className="font-extrabold text-xs mt-0.5">10 Testers</p>
-                        <p className="text-[11px] text-zinc-500 font-medium">7 Days • 800 Coins</p>
-                      </button>
+                      {/* 2. Quick Audit (Hide if disabled in SaaS panel) */}
+                      {(rates.quickEnabled !== false) && (
+                        <button
+                          type="button"
+                          onClick={() => applyPreset('quick')}
+                          className={`p-3 rounded-2xl border text-left transition-all ${
+                            selectedPreset === 'quick' 
+                              ? 'bg-blue-50 border-blue-600 text-blue-900 shadow-sm ring-1 ring-blue-600' 
+                              : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100 text-zinc-700'
+                          }`}
+                        >
+                          <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider block">Quick Audit</span>
+                          <p className="font-extrabold text-xs mt-0.5">{rates.quickTesters || 10} Testers</p>
+                          <p className="text-[11px] text-zinc-500 font-medium">{rates.quickDays || 7} Days • {(rates.quickCoins ?? 100).toLocaleString()} Coins</p>
+                        </button>
+                      )}
 
-                      <button
-                        type="button"
-                        onClick={() => applyPreset('pro')}
-                        className={`p-3 rounded-2xl border text-left transition-all ${
-                          selectedPreset === 'pro' 
-                            ? 'bg-blue-50 border-blue-600 text-blue-900 shadow-sm ring-1 ring-blue-600' 
-                            : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100 text-zinc-700'
-                        }`}
-                      >
-                        <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider block">Pro Coverage</span>
-                        <p className="font-extrabold text-xs mt-0.5">30 Testers</p>
-                        <p className="text-[11px] text-zinc-500 font-medium">14 Days • 3,500 Coins</p>
-                      </button>
+                      {/* 3. Pro Coverage (Hide if disabled in SaaS panel) */}
+                      {(rates.proEnabled !== false) && (
+                        <button
+                          type="button"
+                          onClick={() => applyPreset('pro')}
+                          className={`p-3 rounded-2xl border text-left transition-all ${
+                            selectedPreset === 'pro' 
+                              ? 'bg-blue-50 border-blue-600 text-blue-900 shadow-sm ring-1 ring-blue-600' 
+                              : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100 text-zinc-700'
+                          }`}
+                        >
+                          <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider block">Pro Coverage</span>
+                          <p className="font-extrabold text-xs mt-0.5">{rates.proTesters || 30} Testers</p>
+                          <p className="text-[11px] text-zinc-500 font-medium">{rates.proDays || 14} Days • {(rates.proCoins ?? 350).toLocaleString()} Coins</p>
+                        </button>
+                      )}
                     </div>
                   </div>
 

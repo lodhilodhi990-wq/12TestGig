@@ -8,7 +8,21 @@ export interface PricingRates {
   oneCoinPkr: number;
   minDepositUsd: number;
   minWithdrawCoins: number;
+  // Package 1: Google Play Req
   base20TesterCost: number;
+  base20Testers: number;
+  base20Days: number;
+  // Package 2: Quick Audit
+  quickCoins: number;
+  quickTesters: number;
+  quickDays: number;
+  quickEnabled: boolean;
+  // Package 3: Pro Coverage
+  proCoins: number;
+  proTesters: number;
+  proDays: number;
+  proEnabled: boolean;
+  // Splits & Accounts
   dailyTesterPayout: number;
   completionBonus: number;
   platformFeePercent: number;
@@ -26,7 +40,17 @@ export const DEFAULT_PRICING_RATES: PricingRates = {
   oneCoinPkr: 2.80,
   minDepositUsd: 5,
   minWithdrawCoins: 1000,
-  base20TesterCost: 2000,
+  base20TesterCost: 200,
+  base20Testers: 20,
+  base20Days: 14,
+  quickCoins: 100,
+  quickTesters: 10,
+  quickDays: 7,
+  quickEnabled: true,
+  proCoins: 350,
+  proTesters: 30,
+  proDays: 14,
+  proEnabled: true,
   dailyTesterPayout: 100,
   completionBonus: 600,
   platformFeePercent: 20,
