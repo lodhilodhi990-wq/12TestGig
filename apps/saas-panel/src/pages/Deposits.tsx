@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Eye, Coins, Search, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
-import { collection, onSnapshot, doc, updateDoc, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 export interface Deposit {
@@ -29,9 +29,7 @@ export default function Deposits() {
 
   useEffect(() => {
     try {
-      // Real-time listener to live Firestore deposits collection
-      const q = query(collection(db, 'deposits'), orderBy('createdAt', 'desc'));
-      const unsub = onSnapshot(q, (snapshot) => {
+      const unsub = onSnapshot(collection(db, 'deposits'), (snapshot) => {
         const liveList: Deposit[] = snapshot.docs.map(doc => {
           const data = doc.data();
           let formattedTime = 'Just now';
@@ -59,40 +57,19 @@ export default function Deposits() {
           };
         });
 
+        // Sort descending by timestamp
+        liveList.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
         setDeposits(liveList);
         setLoading(false);
       }, (error) => {
-        console.warn('Live deposits listener error:', error);
-        // Fallback to non-ordered query in case index is building
-        const fallbackUnsub = onSnapshot(collection(db, 'deposits'), (snap) => {
-          const fallbackList: Deposit[] = snap.docs.map(doc => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              userId: data.userId || '',
-              userEmail: data.userEmail || 'user@example.com',
-              userName: data.userName || 'Developer User',
-              amountUsd: data.amountUsd || '$0.00',
-              amountPkr: data.amountPkr || '0 PKR',
-              coinsToCredit: data.coinsToCredit || '0 🪙',
-              coinsNumber: data.coinsNumber || 0,
-              method: data.method || 'Manual Transfer',
-              accountSender: data.accountSender || 'N/A',
-              receiptUrl: data.receiptUrl || '',
-              note: data.note || '',
-              timestamp: data.timestamp ? new Date(data.timestamp).toLocaleString() : 'Just now',
-              status: data.status || 'pending',
-            };
-          });
-          setDeposits(fallbackList);
-          setLoading(false);
-        });
-        return () => fallbackUnsub();
+        console.warn('Deposits listener notice:', error);
+        setLoading(false);
       });
 
       return () => unsub();
     } catch (e) {
-      console.error('Deposits listener initialization error:', e);
+      console.error('Deposits listener catch:', e);
       setLoading(false);
     }
   }, []);

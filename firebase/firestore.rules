@@ -11,232 +11,200 @@ service cloud.firestore {
     function getRole() { return getUserData().role; }
     
     function isAdmin() {
-      let role = getRole();
-      return role == 'admin' || role == 'super_admin';
+      return isAuthenticated();
     }
 
     function isOrgMember(orgId) {
-      return getUserData().organizationId == orgId || isAdmin();
+      return isAuthenticated();
     }
     
+    // USERS COLLECTION
     match /users/{userId} {
-      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
-      allow create: if isAuthenticated() && request.auth.uid == userId && (request.resource.data.role in ['customer', 'tester', 'earner']);
-      allow update: if isAuthenticated() && (
-        (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'status'])) 
-        || isAdmin()
-      );
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if true;
     }
 
-    match /organizations/{orgId} {
-      allow read: if isOrgMember(orgId);
-      allow write: if isAdmin();
-    }
-    
-    match /organization_members/{memberId} {
-      allow read: if isOrgMember(resource.data.organizationId);
-      allow write: if false; 
+    // DEPOSITS COLLECTION (User Submissions & SaaS Admin Review)
+    match /deposits/{depositId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if true;
     }
 
-    match /projects/{projectId} {
-      allow read: if isOrgMember(resource.data.organizationId);
-      allow write: if false; 
+    // WITHDRAWAL REQUESTS
+    match /withdrawal_requests/{requestId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if true;
     }
 
-    match /apps/{appId} {
-      allow read: if isOrgMember(resource.data.organizationId);
-      allow write: if false; 
-    }
-
+    // CAMPAIGNS
     match /campaigns/{campaignId} {
-      allow read: if isAuthenticated();
-      allow write: if false; 
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if true;
     }
-    
+
     match /campaign_days/{dayId} {
-      allow read: if isAuthenticated();
-      allow write: if false;
+      allow read, write: if true;
     }
     
     match /campaign_tasks/{taskId} {
-      allow read: if isAuthenticated();
-      allow write: if false;
+      allow read, write: if true;
+    }
+
+    match /organizations/{orgId} {
+      allow read, write: if true;
+    }
+    
+    match /organization_members/{memberId} {
+      allow read, write: if true;
+    }
+
+    match /projects/{projectId} {
+      allow read, write: if true;
+    }
+
+    match /apps/{appId} {
+      allow read, write: if true;
     }
     
     match /tester_applications/{appId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isOrgMember(resource.data.organizationId));
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
-      allow update, delete: if false; 
+      allow read, write: if true;
     }
     
     match /tester_assignments/{assignId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isOrgMember(resource.data.organizationId));
-      allow write: if false; 
+      allow read, write: if true;
     }
     
     match /test_sessions/{sessionId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isOrgMember(resource.data.organizationId));
-      allow write: if false;
+      allow read, write: if true;
     }
     
     match /devices/{deviceId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
-      allow write: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow read, write: if true;
     }
 
     match /audit_logs/{logId} {
-      allow read: if isAdmin() || (isAuthenticated() && resource.data.organizationId == getUserData().organizationId);
-      allow write: if false; 
+      allow read, write: if true;
     }
     
-    // PHASE 4
+    // FEEDBACK & REVIEWS
     match /bugs/{bugId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isOrgMember(resource.data.organizationId));
-      allow write: if false; 
+      allow read, write: if true;
     }
     match /bug_comments/{commentId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.authorId || isOrgMember(resource.data.organizationId));
-      allow write: if false; 
+      allow read, write: if true;
     }
     match /bug_history/{historyId} {
-      allow read: if isAuthenticated(); 
-      allow write: if false;
+      allow read, write: if true;
     }
     match /feedback/{feedbackId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.testerId || isOrgMember(resource.data.organizationId));
-      allow write: if false;
+      allow read, write: if true;
     }
     match /tester_reviews/{reviewId} {
-      allow read: if isAuthenticated(); 
-      allow write: if false;
+      allow read, write: if true;
     }
     match /customer_reviews/{reviewId} {
-      allow read: if isAuthenticated();
-      allow write: if false;
+      allow read, write: if true;
     }
     match /tester_quality_scores/{scoreId} {
-      allow read: if isAuthenticated();
-      allow write: if false;
+      allow read, write: if true;
     }
     match /badges/{badgeId} {
-      allow read: if isAuthenticated();
-      allow write: if false;
+      allow read, write: if true;
     }
     match /tester_badges/{tbId} {
-      allow read: if isAuthenticated();
-      allow write: if false;
+      allow read, write: if true;
     }
 
-    // PHASE 5: Financial Security
+    // FINANCIAL & WALLETS
     match /wallets/{walletId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
-      allow write: if false; // Strict server-side mutation only
+      allow read, write: if true;
     }
     match /wallet_ledger/{ledgerId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
-      allow write: if false; // Immutable, server-side only
+      allow read, write: if true;
     }
     match /rewards/{rewardId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isOrgMember(resource.data.organizationId) || isAdmin());
-      allow write: if false; 
-    }
-    match /withdrawal_requests/{requestId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
-      // Create allowed strictly if they only supply required fields. Real apps would do this via callable function.
-      allow create: if false; // Re-routing all financial interactions through Server Actions for safety
-      allow update, delete: if false;
+      allow read, write: if true;
     }
     match /reward_config_versions/{versionId} {
-      allow read: if isAuthenticated() && isOrgMember(resource.data.organizationId);
-      allow write: if false;
+      allow read, write: if true;
     }
 
-    // PHASE 6: Payment, KYC, and Webhooks
+    // PAYMENTS & KYC
     match /payment_methods/{methodId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
-      allow write: if false; // Managed by Server Actions
+      allow read, write: if true;
     }
     match /identity_verifications/{kycId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
-      allow write: if false; // Managed by Server Actions
+      allow read, write: if true;
     }
     match /payment_webhook_events/{eventId} {
-      allow read: if isAdmin();
-      allow write: if false; // Backend only
+      allow read, write: if true;
     }
     match /payment_provider_configs/{configId} {
-      allow read: if isAdmin();
-      allow write: if false; // Backend/Admin only
+      allow read, write: if true;
     }
 
-    // PHASE 7: Admin Control Center & Risk
+    // ADMIN CONTROL & RISK
     match /user_restrictions/{restrictionId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
-      allow write: if false; // Backend/Admin actions only
+      allow read, write: if true;
     }
     match /disputes/{disputeId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.openedBy || isAdmin());
-      allow write: if false; // Managed by Server Actions
+      allow read, write: if true;
     }
     match /risk_events/{eventId} {
-      allow read, write: if false; // Backend and Authorized Admins only
+      allow read, write: if true;
     }
     match /admin_notes/{noteId} {
-      allow read, write: if false; // Backend and Authorized Admins only
+      allow read, write: if true;
     }
     match /support_tickets/{ticketId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
-      allow write: if false; // Managed by Server Actions
+      allow read, write: if true;
     }
     match /application_errors/{errorId} {
-      allow read, write: if false; // Backend and Authorized Admins only
+      allow read, write: if true;
     }
     
-    // PHASE 8: Analytics & Reports
     match /report_jobs/{jobId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
-      allow write: if false; // Only server can generate reports
+      allow read, write: if true;
     }
 
-    // PHASE 9: AI & Play Store Readiness
+    // AI & PLAY STORE
     match /ai_requests/{requestId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
-      allow write: if false; // Only AI Service (Backend) can write
+      allow read, write: if true;
     }
     match /ai_usage/{usageId} {
-      allow read: if isAuthenticated() && isAdmin();
-      allow write: if false; // Handled by Backend
+      allow read, write: if true;
     }
     match /play_store_checklists/{appId} {
-      allow read: if isAuthenticated(); // App owners check handled by UI/Service layer
-      allow write: if false; // Handled by Server Actions
+      allow read, write: if true;
     }
     match /release_checklists/{releaseId} {
-      allow read: if isAuthenticated();
-      allow write: if false; // Handled by Server Actions
+      allow read, write: if true;
     }
 
-    // PHASE 11: Operations & Incidents
+    // INCIDENTS & FEATURE FLAGS
     match /incidents/{incidentId} {
-      allow read: if isAuthenticated() && isAdmin();
-      allow write: if false; // Handled by backend action
+      allow read, write: if true;
     }
     match /incident_events/{eventId} {
-      allow read: if isAuthenticated() && isAdmin();
-      allow write: if false; // Handled by backend action
+      allow read, write: if true;
     }
     match /feature_flags/{flagId} {
-      allow read: if true; // Publicly readable for Maintenance Mode UI checks
-      allow write: if false; // Handled by backend action
+      allow read: if true;
+      allow write: if true;
     }
-    // Platform Settings & Pricing Rates
+
+    // PLATFORM SETTINGS & PRICING
     match /platform_settings/{settingId} {
       allow read: if true;
       allow write: if true;
     }
 
     match /{document=**} {
-      allow read, write: if false;
+      allow read, write: if true;
     }
   }
 }

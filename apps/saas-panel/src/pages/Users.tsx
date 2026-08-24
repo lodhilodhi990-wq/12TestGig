@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ShieldAlert, ShieldCheck, Users as UsersIcon, Search, AlertCircle } from 'lucide-react';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 interface UserItem {
@@ -23,11 +23,10 @@ export default function Users() {
 
   useEffect(() => {
     try {
-      const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
-      const unsub = onSnapshot(q, (snap) => {
+      const unsub = onSnapshot(collection(db, 'users'), (snap) => {
         const list: UserItem[] = snap.docs.map(doc => {
           const data = doc.data();
-          let createdFormatted = 'N/A';
+          let createdFormatted = 'Recent';
           if (data.createdAt?.toDate) {
             createdFormatted = data.createdAt.toDate().toLocaleDateString();
           } else if (data.createdAt) {
@@ -36,9 +35,9 @@ export default function Users() {
 
           return {
             id: doc.id,
-            name: data.displayName || data.name || 'User',
+            name: data.displayName || data.name || data.fullName || 'User',
             email: data.email || 'user@example.com',
-            role: data.role || 'customer',
+            role: data.role || 'tester',
             coinsBalance: data.coinsBalance || data.coins || 0,
             activeTests: data.activeTests || 0,
             trustScore: data.trustScore ?? 100,
@@ -49,32 +48,13 @@ export default function Users() {
         setUsers(list);
         setLoading(false);
       }, (err) => {
-        console.warn('Firestore users fallback notice', err);
-        // Fallback without ordering in case index is pending
-        const unsubFallback = onSnapshot(collection(db, 'users'), (snap) => {
-          const fallbackList: UserItem[] = snap.docs.map(doc => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              name: data.displayName || data.name || 'User',
-              email: data.email || 'user@example.com',
-              role: data.role || 'customer',
-              coinsBalance: data.coinsBalance || data.coins || 0,
-              activeTests: data.activeTests || 0,
-              trustScore: data.trustScore ?? 100,
-              status: data.status || 'active',
-              createdAt: 'Recent',
-            };
-          });
-          setUsers(fallbackList);
-          setLoading(false);
-        });
-        return () => unsubFallback();
+        console.warn('Users listener notice', err);
+        setLoading(false);
       });
 
       return () => unsub();
     } catch (e) {
-      console.error('Users listener error:', e);
+      console.error('Users listener catch:', e);
       setLoading(false);
     }
   }, []);
