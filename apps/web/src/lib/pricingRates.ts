@@ -1,4 +1,4 @@
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export interface PricingRates {
@@ -37,6 +37,20 @@ export const DEFAULT_PRICING_RATES: PricingRates = {
   usdtAddress: 'USDT TRC20: T9yD14Nj9yDbv... (Binance Pay)',
 };
 
+export function getCachedPricingRates(): PricingRates {
+  if (typeof window !== 'undefined') {
+    const cached = localStorage.getItem('admin_pricing_rates');
+    if (cached) {
+      try {
+        return { ...DEFAULT_PRICING_RATES, ...JSON.parse(cached) };
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }
+  return DEFAULT_PRICING_RATES;
+}
+
 export async function fetchLivePricingRates(): Promise<PricingRates> {
   try {
     const docRef = doc(db, 'platform_settings', 'pricing_rates');
@@ -53,16 +67,31 @@ export async function fetchLivePricingRates(): Promise<PricingRates> {
     console.warn('Failed to fetch pricing rates from firestore, using cache', err);
   }
 
-  if (typeof window !== 'undefined') {
-    const cached = localStorage.getItem('admin_pricing_rates');
-    if (cached) {
-      try {
-        return { ...DEFAULT_PRICING_RATES, ...JSON.parse(cached) };
-      } catch (e) {
-        console.error(e);
-      }
-    }
-  }
+  return getCachedPricingRates();
+}
 
-  return DEFAULT_PRICING_RATES;
+export function subscribeToLivePricingRates(callback: (rates: PricingRates) => void) {
+  // 1. Immediately emit cached/default rates
+  callback(getCachedPricingRates());
+
+  try {
+    const docRef = doc(db, 'platform_settings', 'pricing_rates');
+    const unsubscribe = onSnapshot(docRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        const merged = { ...DEFAULT_PRICING_RATES, ...data };
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('admin_pricing_rates', JSON.stringify(merged));
+        }
+        callback(merged);
+      }
+    }, (error) => {
+      console.warn('Pricing subscription fallback to cache', error);
+    });
+
+    return unsubscribe;
+  } catch (e) {
+    console.warn('Realtime subscription error', e);
+    return () => {};
+  }
 }

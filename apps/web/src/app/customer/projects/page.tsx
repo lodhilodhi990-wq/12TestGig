@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
-import { fetchLivePricingRates, DEFAULT_PRICING_RATES, PricingRates } from '@/lib/pricingRates';
+import { subscribeToLivePricingRates, DEFAULT_PRICING_RATES, PricingRates } from '@/lib/pricingRates';
 
 interface Project {
   id: number;
@@ -56,9 +56,9 @@ export default function CustomerProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
 
   useEffect(() => {
-    fetchLivePricingRates().then(data => {
-      setRates(data);
-      if (data.dailyTesterPayout) setDailyRate(data.dailyTesterPayout);
+    const unsub = subscribeToLivePricingRates((liveRates) => {
+      setRates(liveRates);
+      if (liveRates.dailyTesterPayout) setDailyRate(liveRates.dailyTesterPayout);
     });
 
     try {
@@ -69,6 +69,10 @@ export default function CustomerProjects() {
     } catch (e) {
       console.error(e);
     }
+
+    return () => {
+      if (unsub) unsub();
+    };
   }, []);
 
   const saveProjects = (newProjects: Project[]) => {

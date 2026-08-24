@@ -19,7 +19,7 @@ import {
   HelpCircle,
   Clock
 } from 'lucide-react';
-import { fetchLivePricingRates, DEFAULT_PRICING_RATES, PricingRates } from '@/lib/pricingRates';
+import { subscribeToLivePricingRates, DEFAULT_PRICING_RATES, PricingRates } from '@/lib/pricingRates';
 
 interface PaymentMethod {
   id: string;
@@ -53,8 +53,10 @@ export default function CustomerBilling() {
   const [depositSubmitted, setDepositSubmitted] = useState(false);
 
   useEffect(() => {
-    // 1. Fetch live rates set in SaaS Admin panel
-    fetchLivePricingRates().then(data => setRates(data));
+    // 1. Subscribe to live rates set in SaaS Admin panel
+    const unsub = subscribeToLivePricingRates((liveRates) => {
+      setRates(liveRates);
+    });
 
     // 2. Read live balance from localStorage
     try {
@@ -67,6 +69,10 @@ export default function CustomerBilling() {
     } catch (e) {
       console.error(e);
     }
+
+    return () => {
+      if (unsub) unsub();
+    };
   }, []);
 
   const handleSelectPlan = (coins: number) => {

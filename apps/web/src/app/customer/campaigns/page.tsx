@@ -17,7 +17,7 @@ import {
   Sliders
 } from 'lucide-react';
 import Link from 'next/link';
-import { fetchLivePricingRates, DEFAULT_PRICING_RATES, PricingRates } from '@/lib/pricingRates';
+import { subscribeToLivePricingRates, DEFAULT_PRICING_RATES, PricingRates } from '@/lib/pricingRates';
 
 interface Campaign {
   id: number;
@@ -49,7 +49,9 @@ export default function CustomerCampaigns() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
 
   useEffect(() => {
-    fetchLivePricingRates().then(data => setRates(data));
+    const unsub = subscribeToLivePricingRates((liveRates) => {
+      setRates(liveRates);
+    });
 
     try {
       const saved = localStorage.getItem('user_apps_campaigns');
@@ -59,6 +61,10 @@ export default function CustomerCampaigns() {
     } catch (e) {
       console.error(e);
     }
+
+    return () => {
+      if (unsub) unsub();
+    };
   }, []);
 
   const saveCampaigns = (newCamps: Campaign[]) => {
