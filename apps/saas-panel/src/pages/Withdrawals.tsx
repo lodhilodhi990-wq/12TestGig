@@ -6,8 +6,7 @@ import {
   Clock, 
   Search, 
   Coins, 
-  ShieldCheck,
-  RefreshCw
+  ShieldCheck
 } from 'lucide-react';
 import { collection, query, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -39,7 +38,7 @@ export default function Withdrawals() {
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
-    // 1. Listen to withdrawal_requests in Firestore
+    // 1. Listen to live withdrawal_requests in Firestore
     try {
       const q = query(collection(db, 'withdrawal_requests'), orderBy('createdAt', 'desc'));
       const unsub = onSnapshot(q, (snapshot) => {
@@ -47,79 +46,23 @@ export default function Withdrawals() {
         snapshot.forEach((d) => {
           list.push({ id: d.id, ...d.data() } as Withdrawal);
         });
-        if (list.length > 0) {
-          setWithdrawals(list);
-        } else {
-          loadFallbackWithdrawals();
-        }
+        setWithdrawals(list);
       }, (err) => {
-        console.warn('Firestore withdrawals notice, using fallback', err);
-        loadFallbackWithdrawals();
+        console.warn('Firestore withdrawals fallback notice', err);
+        const unsubFallback = onSnapshot(collection(db, 'withdrawal_requests'), (snapshot) => {
+          const list: Withdrawal[] = [];
+          snapshot.forEach((d) => {
+            list.push({ id: d.id, ...d.data() } as Withdrawal);
+          });
+          setWithdrawals(list);
+        });
+        return () => unsubFallback();
       });
       return () => unsub();
     } catch (e) {
-      loadFallbackWithdrawals();
+      console.error('Withdrawals subscription error:', e);
     }
   }, []);
-
-  const loadFallbackWithdrawals = () => {
-    try {
-      const cached = localStorage.getItem('admin_withdrawal_requests');
-      if (cached) {
-        setWithdrawals(JSON.parse(cached));
-        return;
-      }
-    } catch (e) {
-      console.error(e);
-    }
-
-    // Default demo-free initial state
-    const defaults: Withdrawal[] = [
-      {
-        id: 'WD-90412',
-        userName: 'Hamza Tariq',
-        userEmail: 'hamza.qa@gmail.com',
-        amountCoins: 1200,
-        amountUsd: 12.00,
-        amountPkr: 3360,
-        method: 'easypaisa',
-        accountNumber: '0312-9876543',
-        accountTitle: 'Hamza Tariq',
-        status: 'pending',
-        createdAt: new Date(Date.now() - 3600000 * 2).toISOString()
-      },
-      {
-        id: 'WD-89104',
-        userName: 'Zubair Khan',
-        userEmail: 'zubair.tester@gmail.com',
-        amountCoins: 2500,
-        amountUsd: 25.00,
-        amountPkr: 7000,
-        method: 'bank',
-        accountNumber: 'Meezan Bank - PK36MEZN000123456789',
-        accountTitle: 'Zubair Khan QA',
-        status: 'pending',
-        createdAt: new Date(Date.now() - 3600000 * 5).toISOString()
-      },
-      {
-        id: 'WD-78019',
-        userName: 'Sarah Jenkins',
-        userEmail: 'sarah.j@globaltesting.io',
-        amountCoins: 5000,
-        amountUsd: 50.00,
-        amountPkr: 14000,
-        method: 'payoneer',
-        accountNumber: 'sarah.j@globaltesting.io',
-        accountTitle: 'Sarah Jenkins',
-        status: 'paid',
-        transactionId: 'PAYO-9912041928',
-        createdAt: new Date(Date.now() - 86400000 * 1).toISOString()
-      }
-    ];
-
-    setWithdrawals(defaults);
-    localStorage.setItem('admin_withdrawal_requests', JSON.stringify(defaults));
-  };
 
   const handleApproveAndPay = async (w: Withdrawal) => {
     setActionLoading(true);
@@ -213,12 +156,12 @@ export default function Withdrawals() {
           </p>
         </div>
 
-        <button 
-          onClick={loadFallbackWithdrawals}
-          className="px-4 py-2 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 font-bold text-xs rounded-xl flex items-center gap-2 transition"
-        >
-          <RefreshCw className="w-3.5 h-3.5" /> Refresh Requests
-        </button>
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            Live Firestore Sync
+          </span>
+        </div>
       </div>
 
       {/* Metrics Row */}

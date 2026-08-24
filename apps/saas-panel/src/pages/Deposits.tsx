@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Eye, Coins, Search } from 'lucide-react';
-import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { Eye, Coins, Search, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { collection, onSnapshot, doc, updateDoc, query, orderBy } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
-interface Deposit {
+export interface Deposit {
   id: string;
+  userId?: string;
   userEmail: string;
   userName: string;
   amountUsd: string;
@@ -14,312 +15,366 @@ interface Deposit {
   method: string;
   accountSender: string;
   receiptUrl: string;
+  note?: string;
   timestamp: string;
   status: 'pending' | 'approved' | 'rejected';
 }
 
-const INITIAL_MOCK_DEPOSITS: Deposit[] = [
-  {
-    id: 'DEP-9021',
-    userEmail: 'dev.omar@gmail.com',
-    userName: 'Omar Farooq',
-    amountUsd: '$50.00',
-    amountPkr: '14,000 PKR',
-    coinsToCredit: '5,000 🪙',
-    coinsNumber: 5000,
-    method: 'Easypaisa (Pakistan)',
-    accountSender: '0312-9876543 (TID: 89012345)',
-    receiptUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=800',
-    timestamp: '10 mins ago',
-    status: 'pending',
-  },
-  {
-    id: 'DEP-9020',
-    userEmail: 'sarah.tech@outlook.com',
-    userName: 'Sarah Jenkins',
-    amountUsd: '$100.00',
-    amountPkr: '28,000 PKR',
-    coinsToCredit: '10,000 🪙',
-    coinsNumber: 10000,
-    method: 'Meezan Bank (PKR / Raast)',
-    accountSender: 'HBL - 0987654321',
-    receiptUrl: 'https://images.unsplash.com/photo-1554224154-26032ffc0d07?auto=format&fit=crop&q=80&w=800',
-    timestamp: '1 hour ago',
-    status: 'pending',
-  },
-  {
-    id: 'DEP-9018',
-    userEmail: 'bilal.apps@gmail.com',
-    userName: 'Bilal Khan',
-    amountUsd: '$200.00',
-    amountPkr: '56,000 PKR',
-    coinsToCredit: '20,000 🪙',
-    coinsNumber: 20000,
-    method: 'USDT TRC20 & Binance Pay',
-    accountSender: 'TxID: 0x9f18a2...827',
-    receiptUrl: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&q=80&w=800',
-    timestamp: 'Yesterday',
-    status: 'approved',
-  },
-];
-
 export default function Deposits() {
   const [selectedReceipt, setSelectedReceipt] = useState<Deposit | null>(null);
-  const [deposits, setDeposits] = useState<Deposit[]>(INITIAL_MOCK_DEPOSITS);
+  const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     try {
-      const q = collection(db, 'deposits');
+      // Real-time listener to live Firestore deposits collection
+      const q = query(collection(db, 'deposits'), orderBy('createdAt', 'desc'));
       const unsub = onSnapshot(q, (snapshot) => {
-        if (!snapshot.empty) {
-          const liveList: Deposit[] = snapshot.docs.map(doc => {
+        const liveList: Deposit[] = snapshot.docs.map(doc => {
+          const data = doc.data();
+          let formattedTime = 'Just now';
+          if (data.createdAt?.toDate) {
+            formattedTime = data.createdAt.toDate().toLocaleString();
+          } else if (data.timestamp) {
+            formattedTime = new Date(data.timestamp).toLocaleString();
+          }
+
+          return {
+            id: doc.id,
+            userId: data.userId || '',
+            userEmail: data.userEmail || 'user@example.com',
+            userName: data.userName || 'Developer User',
+            amountUsd: data.amountUsd || '$0.00',
+            amountPkr: data.amountPkr || '0 PKR',
+            coinsToCredit: data.coinsToCredit || '0 🪙',
+            coinsNumber: data.coinsNumber || 0,
+            method: data.method || 'Manual Transfer',
+            accountSender: data.accountSender || 'N/A',
+            receiptUrl: data.receiptUrl || '',
+            note: data.note || '',
+            timestamp: formattedTime,
+            status: data.status || 'pending',
+          };
+        });
+
+        setDeposits(liveList);
+        setLoading(false);
+      }, (error) => {
+        console.warn('Live deposits listener error:', error);
+        // Fallback to non-ordered query in case index is building
+        const fallbackUnsub = onSnapshot(collection(db, 'deposits'), (snap) => {
+          const fallbackList: Deposit[] = snap.docs.map(doc => {
             const data = doc.data();
             return {
               id: doc.id,
+              userId: data.userId || '',
               userEmail: data.userEmail || 'user@example.com',
-              userName: data.userName || 'Developer',
-              amountUsd: data.amountUsd || '$20.00',
-              amountPkr: data.amountPkr || '5,600 PKR',
-              coinsToCredit: data.coinsToCredit || '2,000 🪙',
-              coinsNumber: data.coinsNumber || 2000,
-              method: data.method || 'Easypaisa',
-              accountSender: data.accountSender || '03001234567',
-              receiptUrl: data.receiptUrl || 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=800',
-              timestamp: data.timestamp ? new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now',
+              userName: data.userName || 'Developer User',
+              amountUsd: data.amountUsd || '$0.00',
+              amountPkr: data.amountPkr || '0 PKR',
+              coinsToCredit: data.coinsToCredit || '0 🪙',
+              coinsNumber: data.coinsNumber || 0,
+              method: data.method || 'Manual Transfer',
+              accountSender: data.accountSender || 'N/A',
+              receiptUrl: data.receiptUrl || '',
+              note: data.note || '',
+              timestamp: data.timestamp ? new Date(data.timestamp).toLocaleString() : 'Just now',
               status: data.status || 'pending',
             };
           });
-
-          // Merge live deposits with mock items for a full rich experience
-          setDeposits([...liveList, ...INITIAL_MOCK_DEPOSITS]);
-        }
-      }, (error) => {
-        console.warn('Deposits snapshot notice', error);
+          setDeposits(fallbackList);
+          setLoading(false);
+        });
+        return () => fallbackUnsub();
       });
 
       return () => unsub();
     } catch (e) {
-      console.warn('Realtime deposit listener fallback', e);
+      console.error('Deposits listener initialization error:', e);
+      setLoading(false);
     }
   }, []);
 
-  const handleApprove = async (id: string) => {
-    setDeposits(prev => prev.map(d => d.id === id ? { ...d, status: 'approved' } : d));
-    setSelectedReceipt(null);
-
+  const handleStatusChange = async (id: string, newStatus: 'approved' | 'rejected') => {
     try {
-      await updateDoc(doc(db, 'deposits', id), {
-        status: 'approved',
-        approvedAt: new Date().toISOString()
+      const depositRef = doc(db, 'deposits', id);
+      await updateDoc(depositRef, {
+        status: newStatus,
+        updatedAt: new Date().toISOString()
       });
-    } catch (e) {
-      console.warn('Firestore update fallback', e);
-    }
 
-    alert(`Deposit ${id} Approved! Coins credited to developer's wallet.`);
+      setDeposits(prev => prev.map(d => d.id === id ? { ...d, status: newStatus } : d));
+      if (selectedReceipt && selectedReceipt.id === id) {
+        setSelectedReceipt(prev => prev ? { ...prev, status: newStatus } : null);
+      }
+    } catch (err) {
+      console.error('Failed to update deposit status:', err);
+      alert('Could not update status. Please check your Firestore connection.');
+    }
   };
 
-  const handleReject = async (id: string) => {
-    setDeposits(prev => prev.map(d => d.id === id ? { ...d, status: 'rejected' } : d));
-    setSelectedReceipt(null);
+  const filteredDeposits = deposits.filter(dep => {
+    const matchesSearch = 
+      dep.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      dep.userEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      dep.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      dep.accountSender.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      dep.method.toLowerCase().includes(searchQuery.toLowerCase());
 
-    try {
-      await updateDoc(doc(db, 'deposits', id), {
-        status: 'rejected',
-        rejectedAt: new Date().toISOString()
-      });
-    } catch (e) {
-      console.warn('Firestore update fallback', e);
-    }
+    const matchesStatus = statusFilter === 'all' || dep.status === statusFilter;
 
-    alert(`Deposit ${id} marked as rejected.`);
-  };
+    return matchesSearch && matchesStatus;
+  });
 
-  const filteredDeposits = deposits.filter(d => 
-    d.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    d.userEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    d.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    d.method.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    d.accountSender.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const pendingCount = deposits.filter(d => d.status === 'pending').length;
+  const approvedCount = deposits.filter(d => d.status === 'approved').length;
 
   return (
-    <div className="space-y-6 font-sans">
+    <div className="space-y-6 font-sans max-w-7xl pb-16">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
             <Coins className="w-6 h-6 text-amber-400" />
-            Coin Deposits & Payment Verifications
+            User Coin Deposits & Payment Receipts
           </h1>
-          <p className="text-xs text-slate-400 mt-1">Review user payment receipts and credit coins to developer accounts.</p>
+          <p className="text-xs text-slate-400 mt-1">
+            Live real-time queue of user payment receipts submitted via JazzCash, Easypaisa, Bank, or USDT.
+          </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-            <span className="text-xs text-slate-300 font-semibold">
-              {deposits.filter(d => d.status === 'pending').length} Pending Approvals
-            </span>
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            Live Real-time Sync
+          </span>
+        </div>
+      </div>
+
+      {/* Summary KPI Badges */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-[#0f172a] border border-slate-800 p-5 rounded-2xl">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pending Verifications</span>
+            <Clock className="w-4 h-4 text-amber-400" />
           </div>
+          <p className="text-2xl font-black text-amber-400 mt-2">{pendingCount} Pending</p>
+          <p className="text-xs text-slate-500 mt-0.5">Awaiting admin receipt check</p>
+        </div>
+
+        <div className="bg-[#0f172a] border border-slate-800 p-5 rounded-2xl">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Approved Deposits</span>
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          </div>
+          <p className="text-2xl font-black text-emerald-400 mt-2">{approvedCount} Approved</p>
+          <p className="text-xs text-slate-500 mt-0.5">Coins credited to user wallets</p>
+        </div>
+
+        <div className="bg-[#0f172a] border border-slate-800 p-5 rounded-2xl">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Real Receipts</span>
+            <Coins className="w-4 h-4 text-blue-400" />
+          </div>
+          <p className="text-2xl font-black text-white mt-2">{deposits.length} Total</p>
+          <p className="text-xs text-slate-500 mt-0.5">All-time user deposit submissions</p>
+        </div>
+      </div>
+
+      {/* Filter and Search Bar */}
+      <div className="bg-[#0f172a] border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row gap-3 items-center justify-between">
+        <div className="relative w-full sm:w-80">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input 
+            type="text"
+            placeholder="Search by name, email, TID, or method..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-blue-500"
+          />
+        </div>
+
+        <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto">
+          {(['all', 'pending', 'approved', 'rejected'] as const).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setStatusFilter(tab)}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold capitalize transition cursor-pointer ${
+                statusFilter === tab
+                  ? 'bg-blue-600 text-white shadow'
+                  : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Deposits Table */}
       <div className="bg-[#0f172a] border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between gap-4">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input 
-              type="text" 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by user email, ID or sender TID..." 
-              className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-4 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-            />
+        {loading ? (
+          <div className="p-16 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-2">
+            <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            <span>Connecting to live Firestore deposits queue...</span>
           </div>
-          <span className="text-xs text-slate-400 font-medium">Rate: $1.00 = 100 🪙</span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-900/60 border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
-              <tr>
-                <th className="p-4">Transaction ID & User</th>
-                <th className="p-4">Payment Method</th>
-                <th className="p-4">Amount Sent</th>
-                <th className="p-4">Coins to Credit</th>
-                <th className="p-4">Receipt Proof</th>
-                <th className="p-4">Status</th>
-                <th className="p-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/80">
-              {filteredDeposits.map((dep) => (
-                <tr key={dep.id} className="hover:bg-slate-800/20 transition">
-                  <td className="p-4">
-                    <p className="font-bold text-white">{dep.userName}</p>
-                    <p className="text-[11px] text-slate-400">{dep.userEmail}</p>
-                    <p className="text-[10px] text-slate-500 font-mono mt-0.5">{dep.id} • {dep.timestamp}</p>
-                  </td>
-                  <td className="p-4">
-                    <p className="text-white font-medium">{dep.method}</p>
-                    <p className="text-[10px] text-slate-400 font-mono">From: {dep.accountSender}</p>
-                  </td>
-                  <td className="p-4">
-                    <p className="text-white font-bold">{dep.amountUsd}</p>
-                    <p className="text-[10px] text-emerald-400 font-semibold">{dep.amountPkr}</p>
-                  </td>
-                  <td className="p-4">
-                    <span className="inline-flex items-center gap-1 font-mono font-extrabold text-amber-300 text-sm">
-                      {dep.coinsToCredit}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <button 
-                      onClick={() => setSelectedReceipt(dep)}
-                      className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-blue-400 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition border border-slate-700"
-                    >
-                      <Eye className="w-3.5 h-3.5" /> View Receipt
-                    </button>
-                  </td>
-                  <td className="p-4">
-                    <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider ${
-                      dep.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' :
-                      dep.status === 'rejected' ? 'bg-red-500/10 text-red-400 border border-red-500/30' :
-                      'bg-amber-500/10 text-amber-300 border border-amber-500/30 animate-pulse'
-                    }`}>
-                      {dep.status}
-                    </span>
-                  </td>
-                  <td className="p-4 text-right">
-                    {dep.status === 'pending' ? (
-                      <div className="flex items-center justify-end gap-2">
-                        <button 
-                          onClick={() => handleApprove(dep.id)}
-                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs transition shadow-sm"
-                        >
-                          Approve
-                        </button>
-                        <button 
-                          onClick={() => handleReject(dep.id)}
-                          className="px-2.5 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-400 font-bold rounded-lg text-xs transition border border-red-500/30"
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="text-slate-500 text-[11px] font-semibold">Processed</span>
-                    )}
-                  </td>
+        ) : filteredDeposits.length === 0 ? (
+          <div className="p-16 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-2">
+            <AlertCircle className="w-8 h-8 text-slate-600" />
+            <p className="font-bold text-white text-sm">No real deposits in this view</p>
+            <p className="text-slate-500 text-[11px] max-w-sm">
+              {searchQuery ? 'No results matched your search criteria.' : 'When a user deposits funds from the web app, their receipt will appear here live in real-time.'}
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-900/60 border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+                <tr>
+                  <th className="p-4">User Details</th>
+                  <th className="p-4">Payment Method</th>
+                  <th className="p-4">Amount & Coins</th>
+                  <th className="p-4">Sender Account / TID</th>
+                  <th className="p-4">Submitted At</th>
+                  <th className="p-4">Status</th>
+                  <th className="p-4 text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-800/80">
+                {filteredDeposits.map((dep) => (
+                  <tr key={dep.id} className="hover:bg-slate-800/20 transition">
+                    <td className="p-4">
+                      <p className="font-bold text-white">{dep.userName}</p>
+                      <p className="text-[11px] text-slate-400">{dep.userEmail}</p>
+                    </td>
+                    <td className="p-4">
+                      <span className="px-2.5 py-1 bg-slate-900 border border-slate-700 rounded-lg text-[11px] font-bold text-slate-200">
+                        {dep.method}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <p className="font-bold text-amber-300 font-mono">{dep.coinsToCredit}</p>
+                      <p className="text-[10px] text-slate-400">{dep.amountUsd} ({dep.amountPkr})</p>
+                    </td>
+                    <td className="p-4">
+                      <p className="font-mono text-slate-300 text-[11px] font-semibold">{dep.accountSender}</p>
+                    </td>
+                    <td className="p-4 text-slate-400 text-[11px]">
+                      {dep.timestamp}
+                    </td>
+                    <td className="p-4">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
+                        dep.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' :
+                        dep.status === 'rejected' ? 'bg-red-500/10 text-red-400 border border-red-500/30' :
+                        'bg-amber-500/10 text-amber-300 border border-amber-500/30'
+                      }`}>
+                        {dep.status}
+                      </span>
+                    </td>
+                    <td className="p-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {dep.receiptUrl && (
+                          <button
+                            onClick={() => setSelectedReceipt(dep)}
+                            className="p-1.5 bg-slate-800 hover:bg-slate-700 text-blue-400 rounded-lg transition"
+                            title="View Receipt Screenshot"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {dep.status === 'pending' && (
+                          <>
+                            <button
+                              onClick={() => handleStatusChange(dep.id, 'approved')}
+                              className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white rounded-lg font-bold transition text-[11px] border border-emerald-500/30"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleStatusChange(dep.id, 'rejected')}
+                              className="px-2.5 py-1 bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white rounded-lg font-bold transition text-[11px] border border-red-500/30"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {/* Receipt Proof Preview Modal */}
+      {/* View Receipt Modal */}
       {selectedReceipt && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0f172a] border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center justify-between mb-4">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#0f172a] border border-slate-800 rounded-3xl max-w-lg w-full p-6 space-y-4 animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div>
-                <h3 className="text-lg font-bold text-white">Payment Receipt Proof</h3>
-                <p className="text-xs text-slate-400">Transaction: {selectedReceipt.id} • {selectedReceipt.userName}</p>
+                <h3 className="text-sm font-bold text-white">Payment Receipt Proof</h3>
+                <p className="text-[11px] text-slate-400">{selectedReceipt.userName} ({selectedReceipt.userEmail})</p>
               </div>
-              <button onClick={() => setSelectedReceipt(null)} className="text-slate-400 hover:text-white font-bold text-lg">✕</button>
+              <button onClick={() => setSelectedReceipt(null)} className="text-slate-400 hover:text-white text-lg font-bold">✕</button>
             </div>
 
-            <div className="bg-slate-950 p-2 rounded-2xl border border-slate-800 mb-4 flex items-center justify-center overflow-hidden max-h-72">
-              <img 
-                src={selectedReceipt.receiptUrl} 
-                alt="Payment Receipt" 
-                className="w-full h-full object-cover rounded-xl"
-              />
-            </div>
-
-            <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800 text-xs space-y-1.5 mb-5">
+            <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 text-xs space-y-2">
               <div className="flex justify-between">
-                <span className="text-slate-400">Amount Sent:</span>
-                <span className="text-white font-bold">{selectedReceipt.amountUsd} ({selectedReceipt.amountPkr})</span>
+                <span className="text-slate-400">Method:</span>
+                <strong className="text-white font-bold">{selectedReceipt.method}</strong>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Coins to Credit:</span>
-                <span className="text-amber-300 font-bold">{selectedReceipt.coinsToCredit}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Payment Account:</span>
-                <span className="text-slate-200">{selectedReceipt.method}</span>
+                <span className="text-slate-400">Amount / Coins:</span>
+                <strong className="text-amber-400 font-bold">{selectedReceipt.coinsToCredit} ({selectedReceipt.amountUsd} / {selectedReceipt.amountPkr})</strong>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Sender / TID:</span>
-                <span className="text-emerald-400 font-mono">{selectedReceipt.accountSender}</span>
+                <strong className="text-emerald-400 font-mono">{selectedReceipt.accountSender}</strong>
               </div>
+              {selectedReceipt.note && (
+                <div className="pt-2 border-t border-slate-800 text-slate-300 text-[11px]">
+                  <strong>User Note:</strong> {selectedReceipt.note}
+                </div>
+              )}
             </div>
 
-            <div className="flex gap-3">
-              <button 
-                onClick={() => setSelectedReceipt(null)}
-                className="flex-1 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-xl transition"
-              >
-                Close
-              </button>
-              {selectedReceipt.status === 'pending' && (
+            {selectedReceipt.receiptUrl && (
+              <div className="rounded-xl overflow-hidden border border-slate-800 max-h-72 flex items-center justify-center bg-black">
+                <img 
+                  src={selectedReceipt.receiptUrl} 
+                  alt="Receipt Screenshot" 
+                  className="object-contain max-h-72 w-full"
+                />
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              {selectedReceipt.status === 'pending' ? (
                 <>
-                  <button 
-                    onClick={() => handleReject(selectedReceipt.id)}
-                    className="flex-1 px-4 py-2.5 bg-red-600/20 hover:bg-red-600/30 text-red-400 font-bold text-xs rounded-xl transition border border-red-500/30"
+                  <button
+                    onClick={() => handleStatusChange(selectedReceipt.id, 'approved')}
+                    className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition"
                   >
-                    Reject
+                    ✓ Approve & Credit Coins
                   </button>
-                  <button 
-                    onClick={() => handleApprove(selectedReceipt.id)}
-                    className="flex-1 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition shadow-lg shadow-emerald-600/20"
+                  <button
+                    onClick={() => handleStatusChange(selectedReceipt.id, 'rejected')}
+                    className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl transition"
                   >
-                    Approve & Credit Coins
+                    ✕ Reject Receipt
                   </button>
                 </>
+              ) : (
+                <button
+                  onClick={() => setSelectedReceipt(null)}
+                  className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl transition"
+                >
+                  Close
+                </button>
               )}
             </div>
           </div>
