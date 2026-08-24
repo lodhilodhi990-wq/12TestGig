@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
@@ -23,15 +23,21 @@ import {
   UserCheck,
   Zap,
   Play,
-  Eye
+  Eye,
+  Wallet,
+  ArrowUpRight
 } from 'lucide-react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import AdSenseBanner from '@/components/AdSenseBanner';
+import { subscribeToLivePricingRates, DEFAULT_PRICING_RATES, PricingRates, PricingPlanItem } from '@/lib/pricingRates';
 
 export default function MarketingLandingPage() {
   const router = useRouter();
+
+  // Live Pricing Rates & Plans Stream
+  const [rates, setRates] = useState<PricingRates>(DEFAULT_PRICING_RATES);
 
   // Instant Auth State on Landing Page
   const [authMode, setAuthMode] = useState<'register' | 'login'>('register');
@@ -43,8 +49,21 @@ export default function MarketingLandingPage() {
   const [authError, setAuthError] = useState('');
   const [authSuccess, setAuthSuccess] = useState(false);
 
-  // Dynamic Pricing Simulator
-  const [selectedPlan, setSelectedPlan] = useState<'googleplay' | 'quick' | 'growth'>('googleplay');
+  useEffect(() => {
+    const unsub = subscribeToLivePricingRates((liveRates) => {
+      setRates(liveRates);
+    });
+    return () => unsub();
+  }, []);
+
+  const scrollToAuth = (role: 'customer' | 'tester') => {
+    setAuthRole(role);
+    setAuthMode('register');
+    const el = document.getElementById('instant-auth');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   const handleInstantAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,6 +143,11 @@ export default function MarketingLandingPage() {
     }
   ];
 
+  // Dynamic Plans Array
+  const activePlans = rates.plans && rates.plans.length > 0 
+    ? rates.plans.filter(p => p.enabled !== false) 
+    : DEFAULT_PRICING_RATES.plans!;
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-600 selection:text-white">
       {/* 1. TOP NAVBAR */}
@@ -154,13 +178,13 @@ export default function MarketingLandingPage() {
           </nav>
 
           <div className="flex items-center gap-3">
-            <a 
-              href="#instant-auth"
-              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black transition shadow-lg shadow-blue-600/30 flex items-center gap-1.5"
+            <button 
+              onClick={() => scrollToAuth('customer')}
+              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black transition shadow-lg shadow-blue-600/30 flex items-center gap-1.5 cursor-pointer"
             >
               <span>Get 20 Testers</span>
               <ArrowRight className="w-3.5 h-3.5" />
-            </a>
+            </button>
           </div>
         </div>
       </header>
@@ -222,13 +246,13 @@ export default function MarketingLandingPage() {
                 <div className="flex items-center text-amber-400">
                   {'★★★★★'}
                 </div>
-                <p className="text-slate-400 text-[11px] font-medium">Trusted by 2,400+ Android Developers & Studios</p>
+                <p className="text-slate-400 text-[11px] font-medium">Trusted by 2,400+ Android Developers & Testers</p>
               </div>
             </div>
           </div>
 
           {/* Right Column: EMBEDDED INSTANT SIGN-UP & LOGIN CARD */}
-          <div id="instant-auth" className="lg:col-span-5">
+          <div id="instant-auth" className="lg:col-span-5 scroll-mt-28">
             <div className="bg-slate-900/90 border border-slate-700/80 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl relative">
               <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
                 <div>
@@ -369,7 +393,7 @@ export default function MarketingLandingPage() {
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : authMode === 'register' ? (
                     <>
-                      <span>Create Account & Get 500 Bonus Coins</span>
+                      <span>{authRole === 'customer' ? 'Create Account & Get 500 Bonus Coins' : 'Join as Tester & Start Earning'}</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </>
                   ) : (
@@ -391,12 +415,12 @@ export default function MarketingLandingPage() {
         </div>
       </section>
 
-      {/* 3. HOW IT WORKS DUAL SHOWCASE */}
-      <section id="developers" className="py-20 px-6 bg-slate-900/40 border-y border-slate-800/80">
+      {/* 3. HOW IT WORKS FOR DEVELOPERS */}
+      <section id="developers" className="py-20 px-6 bg-slate-900/40 border-y border-slate-800/80 scroll-mt-20">
         <div className="max-w-7xl mx-auto space-y-16">
           <div className="text-center max-w-3xl mx-auto space-y-3">
             <span className="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold uppercase tracking-wider">
-              Simple 4-Step Process
+              For Android Developers
             </span>
             <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
               How Developers Pass Closed Testing in 14 Days
@@ -443,7 +467,79 @@ export default function MarketingLandingPage() {
         </div>
       </section>
 
-      {/* 4. TRUST & SECURITY RADAR */}
+      {/* 4. DEDICATED "FOR TESTERS" SECTION (FIXED) */}
+      <section id="testers" className="py-20 px-6 bg-slate-950 border-b border-slate-800/80 scroll-mt-20">
+        <div className="max-w-7xl mx-auto space-y-16">
+          <div className="text-center max-w-3xl mx-auto space-y-3">
+            <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider">
+              🎮 Earn Real Money
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+              Test Android Apps & Earn Daily Cash from Your Phone
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-400">
+              Join thousands of certified testers in Pakistan and worldwide. Test new apps for 3-5 minutes daily and cash out instantly.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {[
+              {
+                step: '01',
+                title: 'Explore Available Apps',
+                desc: 'Browse hundreds of games, fintech, and utility apps ready for 14-day closed testing.'
+              },
+              {
+                step: '02',
+                title: 'Daily 3-5 Min Testing',
+                desc: 'Install the app from Google Play, explore features, and submit daily screenshot proof.'
+              },
+              {
+                step: '03',
+                title: 'Earn 100-300 Coins / Day',
+                desc: 'Get paid coins for every daily check-in + huge bonus coins upon completing 14 continuous days.'
+              },
+              {
+                step: '04',
+                title: 'Instant Cashout to Wallet',
+                desc: 'Withdraw your earnings directly to JazzCash, Easypaisa, SadaPay, Local Bank, or USDT Crypto.'
+              }
+            ].map((st, i) => (
+              <div key={i} className="bg-slate-900 border border-slate-800 p-6 rounded-3xl relative overflow-hidden group hover:border-emerald-500/50 transition">
+                <span className="text-4xl font-black text-slate-800 group-hover:text-emerald-500/20 transition font-mono absolute top-4 right-4">
+                  {st.step}
+                </span>
+                <div className="relative z-10 space-y-2 mt-4">
+                  <h3 className="text-base font-bold text-white">{st.title}</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">{st.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Tester Cashout Banner */}
+          <div className="p-8 rounded-3xl bg-gradient-to-r from-emerald-950/60 via-slate-900 to-emerald-950/40 border border-emerald-500/30 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wide">
+                <Wallet className="w-4 h-4" /> Instant Payout Channels Supported
+              </div>
+              <h3 className="text-xl font-black text-white">Cashout to JazzCash, Easypaisa, SadaPay, Bank IBAN & USDT</h3>
+              <p className="text-xs text-slate-400 max-w-xl leading-relaxed">
+                No hidden fees. Minimum payout starts at just 500 Coins with guaranteed 1 to 24 hour processing time.
+              </p>
+            </div>
+
+            <button
+              onClick={() => scrollToAuth('tester')}
+              className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs rounded-2xl shadow-lg shadow-emerald-600/30 transition whitespace-nowrap flex items-center gap-2 cursor-pointer"
+            >
+              Join as Certified Tester <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* 5. TRUST & SECURITY RADAR */}
       <section className="py-20 px-6">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-6 space-y-6">
@@ -519,8 +615,8 @@ export default function MarketingLandingPage() {
         </div>
       </section>
 
-      {/* 5. PRICING PACKAGES SHOWCASE */}
-      <section id="pricing" className="py-20 px-6 bg-slate-900/40 border-y border-slate-800">
+      {/* 6. DYNAMIC PRICING PACKAGES SHOWCASE (CONNECTED TO SAAS CMS) */}
+      <section id="pricing" className="py-20 px-6 bg-slate-900/40 border-y border-slate-800 scroll-mt-20">
         <div className="max-w-7xl mx-auto space-y-12">
           <div className="text-center max-w-3xl mx-auto space-y-3">
             <span className="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold uppercase tracking-wider">
@@ -535,96 +631,81 @@ export default function MarketingLandingPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                id: 'quick',
-                name: 'Quick Audit Pack',
-                coins: '1,000 Coins',
-                price: '$10 USD / Rs 2,800 PKR',
-                testers: '10 Testers',
-                days: '7 Days',
-                popular: false,
-                desc: 'Best for preliminary feedback and quick UX telemetry before closed testing.'
-              },
-              {
-                id: 'googleplay',
-                name: 'Google Play 14-Day Pack',
-                coins: '2,000 Coins',
-                price: '$20 USD / Rs 5,600 PKR',
-                testers: '20 Verified Testers',
-                days: '14 Continuous Days',
-                popular: true,
-                desc: 'Full closed testing package designed to meet Google Play Console production requirements.'
-              },
-              {
-                id: 'growth',
-                name: 'Studio Multi-App Pack',
-                coins: '5,000 Coins',
-                price: '$50 USD / Rs 14,000 PKR',
-                testers: '30+ Testers',
-                days: '14 Days / Multi-App',
-                popular: false,
-                desc: 'High priority VIP testing for gaming studios and agencies managing multiple apps.'
-              }
-            ].map(plan => (
-              <div 
-                key={plan.id}
-                className={`rounded-3xl p-8 flex flex-col justify-between relative transition ${
-                  plan.popular 
-                    ? 'bg-slate-900 border-2 border-blue-500 shadow-2xl shadow-blue-500/20' 
-                    : 'bg-slate-950 border border-slate-800'
-                }`}
-              >
-                {plan.popular && (
-                  <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] font-black uppercase tracking-wider rounded-full shadow-md">
-                    Most Popular for Google Play
-                  </span>
-                )}
+            {activePlans.map((plan: PricingPlanItem) => {
+              const usdCost = (plan.coins / rates.coinsPerUsd).toFixed(2);
+              const pkrCost = Math.round((plan.coins / rates.coinsPerUsd) * rates.pkrPerUsd).toLocaleString();
 
-                <div className="space-y-4">
-                  <h3 className="text-lg font-black text-white">{plan.name}</h3>
-                  <p className="text-xs text-slate-400">{plan.desc}</p>
+              return (
+                <div 
+                  key={plan.id}
+                  className={`rounded-3xl p-8 flex flex-col justify-between relative transition ${
+                    plan.popular 
+                      ? 'bg-slate-900 border-2 border-blue-500 shadow-2xl shadow-blue-500/20' 
+                      : 'bg-slate-950 border border-slate-800'
+                  }`}
+                >
+                  {plan.popular && (
+                    <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] font-black uppercase tracking-wider rounded-full shadow-md">
+                      {plan.badge || 'Most Popular for Google Play'}
+                    </span>
+                  )}
 
-                  <div className="py-4 border-y border-slate-800 space-y-1">
-                    <div className="text-3xl font-black text-white">{plan.coins}</div>
-                    <div className="text-xs font-bold text-emerald-400">{plan.price}</div>
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-black text-white">{plan.name}</h3>
+                    <p className="text-xs text-slate-400 min-h-[32px]">{plan.description}</p>
+
+                    <div className="py-4 border-y border-slate-800 space-y-1">
+                      <div className="text-3xl font-black text-white">{plan.coins.toLocaleString()} Coins</div>
+                      <div className="text-xs font-bold text-emerald-400">
+                        ${usdCost} USD <span className="text-slate-400 font-normal">/ Rs {pkrCost} PKR</span>
+                      </div>
+                    </div>
+
+                    <ul className="space-y-2.5 text-xs text-slate-300">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span><strong>{plan.testers} Testers</strong> on real Android devices</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span><strong>{plan.days} Days</strong> active testing track</span>
+                      </li>
+                      {plan.features && plan.features.length > 0 ? (
+                        plan.features.map((feat, fIdx) => (
+                          <li key={fIdx} className="flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <span>{feat}</span>
+                          </li>
+                        ))
+                      ) : (
+                        <li className="flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <span>Free replacement guarantee</span>
+                        </li>
+                      )}
+                    </ul>
                   </div>
 
-                  <ul className="space-y-2.5 text-xs text-slate-300">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span><strong>{plan.testers}</strong> on real Android devices</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span><strong>{plan.days}</strong> active testing track</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>Free replacement guarantee</span>
-                    </li>
-                  </ul>
+                  <div className="mt-8">
+                    <button
+                      onClick={() => scrollToAuth('customer')}
+                      className={`w-full py-3 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 cursor-pointer ${
+                        plan.popular 
+                          ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg' 
+                          : 'bg-slate-800 hover:bg-slate-700 text-white'
+                      }`}
+                    >
+                      Select Plan <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
-
-                <div className="mt-8">
-                  <a
-                    href="#instant-auth"
-                    className={`w-full py-3 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 ${
-                      plan.popular 
-                        ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg' 
-                        : 'bg-slate-800 hover:bg-slate-700 text-white'
-                    }`}
-                  >
-                    Select Plan <ArrowRight className="w-3.5 h-3.5" />
-                  </a>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
 
-      {/* 6. VERIFIED DEVELOPER REVIEWS */}
+      {/* 7. VERIFIED DEVELOPER REVIEWS */}
       <section className="py-20 px-6">
         <div className="max-w-7xl mx-auto space-y-12">
           <div className="text-center max-w-2xl mx-auto space-y-2">
@@ -666,7 +747,7 @@ export default function MarketingLandingPage() {
         <AdSenseBanner slotType="inFeed" />
       </div>
 
-      {/* 7. COMPREHENSIVE TRUST & COMPLIANCE FOOTER */}
+      {/* 8. COMPREHENSIVE TRUST & COMPLIANCE FOOTER */}
       <footer className="border-t border-slate-800/80 bg-slate-950 py-16 px-6 text-xs text-slate-400">
         <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
           <div className="col-span-2 space-y-4">
@@ -697,10 +778,10 @@ export default function MarketingLandingPage() {
           <div className="space-y-3">
             <h4 className="font-bold text-white uppercase tracking-wider text-[11px]">Testers & Earners</h4>
             <ul className="space-y-2">
+              <li><a href="#testers" className="hover:text-white transition">For Testers</a></li>
               <li><Link href="/tester/tests" className="hover:text-white transition">Explore Apps</Link></li>
               <li><Link href="/tester/wallet" className="hover:text-white transition">Withdraw Cash</Link></li>
               <li><Link href="/earner/dashboard" className="hover:text-white transition">Affiliate 10%</Link></li>
-              <li><Link href="/blog" className="hover:text-white transition">Testing Guides</Link></li>
             </ul>
           </div>
 

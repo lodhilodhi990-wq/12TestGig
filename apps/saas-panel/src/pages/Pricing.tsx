@@ -5,10 +5,82 @@ import {
   Save, 
   CheckCircle2, 
   RefreshCw,
-  Award
+  Award,
+  Plus,
+  Trash2,
+  Edit3,
+  Sparkles,
+  Layers,
+  Star
 } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+
+export interface PricingPlanItem {
+  id: string;
+  name: string;
+  coins: number;
+  badge?: string;
+  description: string;
+  testers: number;
+  days: number;
+  popular?: boolean;
+  enabled?: boolean;
+  features?: string[];
+}
+
+export const DEFAULT_PLANS: PricingPlanItem[] = [
+  {
+    id: 'quick',
+    name: 'Quick Audit Pack',
+    coins: 1000,
+    badge: 'Preliminary Feedback',
+    description: 'Best for preliminary feedback and quick UX telemetry before closed testing.',
+    testers: 10,
+    days: 7,
+    popular: false,
+    enabled: true,
+    features: [
+      '10 Testers on real Android devices',
+      '7 Days active testing track',
+      'Free replacement guarantee'
+    ]
+  },
+  {
+    id: 'googleplay',
+    name: 'Google Play 14-Day Pack',
+    coins: 2000,
+    badge: 'Most Popular for Google Play',
+    description: 'Full closed testing package designed to meet Google Play Console production requirements.',
+    testers: 20,
+    days: 14,
+    popular: true,
+    enabled: true,
+    features: [
+      '20 Verified Testers on real Android devices',
+      '14 Continuous Days active testing track',
+      'Free replacement guarantee',
+      'Production evaluation telemetry report'
+    ]
+  },
+  {
+    id: 'growth',
+    name: 'Studio Multi-App Pack',
+    coins: 5000,
+    badge: 'VIP Agency Coverage',
+    description: 'High priority VIP testing for gaming studios and agencies managing multiple apps.',
+    testers: 30,
+    days: 14,
+    popular: false,
+    enabled: true,
+    features: [
+      '30+ Testers on real Android devices',
+      '14 Days / Multi-App active testing track',
+      'Free replacement guarantee',
+      'Priority 24/7 support desk'
+    ]
+  }
+];
 
 export default function Pricing() {
   const [isSaving, setIsSaving] = useState(false);
@@ -31,20 +103,21 @@ export default function Pricing() {
   const [pkrPerUsd, setPkrPerUsd] = useState<number>(initial?.pkrPerUsd ?? 280);
   const [minDepositUsd, setMinDepositUsd] = useState<number>(initial?.minDepositUsd ?? 5);
 
-  // Testing Packages
-  const [base20TesterCost, setBase20TesterCost] = useState<number>(initial?.base20TesterCost ?? 200);
-  const [base20Testers, setBase20Testers] = useState<number>(initial?.base20Testers ?? 20);
-  const [base20Days, setBase20Days] = useState<number>(initial?.base20Days ?? 14);
+  // Dynamic Plans Array
+  const [plans, setPlans] = useState<PricingPlanItem[]>(initial?.plans ?? DEFAULT_PLANS);
 
-  const [quickCoins, setQuickCoins] = useState<number>(initial?.quickCoins ?? 100);
-  const [quickTesters, setQuickTesters] = useState<number>(initial?.quickTesters ?? 10);
-  const [quickDays, setQuickDays] = useState<number>(initial?.quickDays ?? 7);
-  const [quickEnabled, setQuickEnabled] = useState<boolean>(initial?.quickEnabled ?? true);
-
-  const [proCoins, setProCoins] = useState<number>(initial?.proCoins ?? 350);
-  const [proTesters, setProTesters] = useState<number>(initial?.proTesters ?? 30);
-  const [proDays, setProDays] = useState<number>(initial?.proDays ?? 14);
-  const [proEnabled, setProEnabled] = useState<boolean>(initial?.proEnabled ?? true);
+  // Modal State for Plan Editing
+  const [showPlanModal, setShowPlanModal] = useState(false);
+  const [editingPlanIndex, setEditingPlanIndex] = useState<number | null>(null);
+  const [planName, setPlanName] = useState('');
+  const [planCoins, setPlanCoins] = useState(2000);
+  const [planBadge, setPlanBadge] = useState('');
+  const [planDesc, setPlanDesc] = useState('');
+  const [planTesters, setPlanTesters] = useState(20);
+  const [planDays, setPlanDays] = useState(14);
+  const [planPopular, setPlanPopular] = useState(false);
+  const [planEnabled, setPlanEnabled] = useState(true);
+  const [planFeaturesText, setPlanFeaturesText] = useState('');
 
   // Splits & Profit
   const [dailyTesterPayout, setDailyTesterPayout] = useState<number>(initial?.dailyTesterPayout ?? 100);
@@ -64,20 +137,12 @@ export default function Pricing() {
           if (d.coinsPerUsd !== undefined) setCoinsPerUsd(Number(d.coinsPerUsd));
           if (d.pkrPerUsd !== undefined) setPkrPerUsd(Number(d.pkrPerUsd));
           if (d.minDepositUsd !== undefined) setMinDepositUsd(Number(d.minDepositUsd));
-          if (d.base20TesterCost !== undefined) setBase20TesterCost(Number(d.base20TesterCost));
-          if (d.base20Testers !== undefined) setBase20Testers(Number(d.base20Testers));
-          if (d.base20Days !== undefined) setBase20Days(Number(d.base20Days));
-          if (d.quickCoins !== undefined) setQuickCoins(Number(d.quickCoins));
-          if (d.quickTesters !== undefined) setQuickTesters(Number(d.quickTesters));
-          if (d.quickDays !== undefined) setQuickDays(Number(d.quickDays));
-          if (d.quickEnabled !== undefined) setQuickEnabled(Boolean(d.quickEnabled));
-          if (d.proCoins !== undefined) setProCoins(Number(d.proCoins));
-          if (d.proTesters !== undefined) setProTesters(Number(d.proTesters));
-          if (d.proDays !== undefined) setProDays(Number(d.proDays));
-          if (d.proEnabled !== undefined) setProEnabled(Boolean(d.proEnabled));
           if (d.dailyTesterPayout !== undefined) setDailyTesterPayout(Number(d.dailyTesterPayout));
           if (d.completionBonus !== undefined) setCompletionBonus(Number(d.completionBonus));
           if (d.platformFeePercent !== undefined) setPlatformFeePercent(Number(d.platformFeePercent));
+          if (d.plans && Array.isArray(d.plans) && d.plans.length > 0) {
+            setPlans(d.plans);
+          }
         }
       } catch (err) {
         console.warn('Firestore load notice:', err);
@@ -85,6 +150,71 @@ export default function Pricing() {
     };
     loadData();
   }, []);
+
+  const handleOpenAddPlan = () => {
+    setEditingPlanIndex(null);
+    setPlanName('');
+    setPlanCoins(1500);
+    setPlanBadge('New Plan');
+    setPlanDesc('Custom testing plan for Android apps.');
+    setPlanTesters(15);
+    setPlanDays(14);
+    setPlanPopular(false);
+    setPlanEnabled(true);
+    setPlanFeaturesText('15 Testers on real Android devices\n14 Days active testing track\nFree replacement guarantee');
+    setShowPlanModal(true);
+  };
+
+  const handleOpenEditPlan = (idx: number) => {
+    const p = plans[idx];
+    setEditingPlanIndex(idx);
+    setPlanName(p.name);
+    setPlanCoins(p.coins);
+    setPlanBadge(p.badge || '');
+    setPlanDesc(p.description);
+    setPlanTesters(p.testers);
+    setPlanDays(p.days);
+    setPlanPopular(p.popular || false);
+    setPlanEnabled(p.enabled !== false);
+    setPlanFeaturesText(p.features ? p.features.join('\n') : '');
+    setShowPlanModal(true);
+  };
+
+  const handleSavePlanItem = (e: React.FormEvent) => {
+    e.preventDefault();
+    const featArray = planFeaturesText
+      .split('\n')
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    const updatedPlan: PricingPlanItem = {
+      id: editingPlanIndex !== null ? plans[editingPlanIndex].id : `plan_${Date.now()}`,
+      name: planName,
+      coins: Number(planCoins),
+      badge: planBadge,
+      description: planDesc,
+      testers: Number(planTesters),
+      days: Number(planDays),
+      popular: planPopular,
+      enabled: planEnabled,
+      features: featArray
+    };
+
+    let newPlansList = [...plans];
+    if (editingPlanIndex !== null) {
+      newPlansList[editingPlanIndex] = updatedPlan;
+    } else {
+      newPlansList.push(updatedPlan);
+    }
+
+    setPlans(newPlansList);
+    setShowPlanModal(false);
+  };
+
+  const handleDeletePlan = (idx: number) => {
+    if (!confirm('Are you sure you want to delete this pricing plan?')) return;
+    setPlans(plans.filter((_, i) => i !== idx));
+  };
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -95,19 +225,8 @@ export default function Pricing() {
       oneCoinPkr: Number(pkrPerUsd) / Number(coinsPerUsd),
       minDepositUsd: Number(minDepositUsd),
 
-      base20TesterCost: Number(base20TesterCost),
-      base20Testers: Number(base20Testers),
-      base20Days: Number(base20Days),
-
-      quickCoins: Number(quickCoins),
-      quickTesters: Number(quickTesters),
-      quickDays: Number(quickDays),
-      quickEnabled: Boolean(quickEnabled),
-
-      proCoins: Number(proCoins),
-      proTesters: Number(proTesters),
-      proDays: Number(proDays),
-      proEnabled: Boolean(proEnabled),
+      // Dynamic plans synced with Landing page & Billing
+      plans: plans,
 
       dailyTesterPayout: Number(dailyTesterPayout),
       completionBonus: Number(completionBonus),
@@ -120,6 +239,7 @@ export default function Pricing() {
       await setDoc(doc(db, 'platform_settings', 'pricing_rates'), payload, { merge: true });
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
+      alert('Pricing rates and landing page plans saved successfully!');
     } catch (e) {
       console.warn('Save error:', e);
       alert('Could not save changes.');
@@ -128,7 +248,8 @@ export default function Pricing() {
     }
   };
 
-  const simTotalCost = Math.round((simTesters * simDays * (base20TesterCost / (base20Testers * base20Days))));
+  const basePlan = plans.find(p => p.id === 'googleplay') || plans[0] || { coins: 2000, testers: 20, days: 14 };
+  const simTotalCost = Math.round((simTesters * simDays * (basePlan.coins / (basePlan.testers * basePlan.days))));
   const simTotalUsd = (simTotalCost / coinsPerUsd).toFixed(2);
   const simTotalPkr = Math.round((simTotalCost / coinsPerUsd) * pkrPerUsd);
   const simPlatformProfitUsd = ((simTotalCost / coinsPerUsd) * (platformFeePercent / 100)).toFixed(2);
@@ -138,291 +259,463 @@ export default function Pricing() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
-            <Coins className="w-6 h-6 text-amber-400" />
-            Coin Economics & Package Pricing
+          <h1 className="text-xl font-black text-white flex items-center gap-2">
+            <Coins className="w-5 h-5 text-amber-400" />
+            Coin Economics & Landing Page Plans Manager
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Configure exchange rates, package coin costs, tester payouts, and simulator projections.
+            Configure global exchange rates and edit the exact pricing plans shown on the Landing Page and Billing modal.
           </p>
         </div>
 
-        <button 
+        <button
           onClick={handleSave}
           disabled={isSaving}
-          className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-blue-600/20 disabled:opacity-50 cursor-pointer"
+          className="px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-emerald-600/20 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
         >
-          {isSaving ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
-          {isSaving ? 'Saving...' : 'Save Pricing Rates'}
+          {isSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          {isSaving ? 'Saving Changes...' : 'Save All Settings'}
         </button>
       </div>
 
       {saveSuccess && (
-        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-2">
-          <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
-          Pricing rates and package costs updated and synced with user apps!
+        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-2 animate-in fade-in">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          Live rates and Landing Page plans updated and synced across all user portals!
         </div>
       )}
 
-      {/* 1. MASTER CURRENCY EXCHANGE RATES */}
-      <div className="bg-[#0f172a] rounded-2xl border border-slate-800 overflow-hidden">
-        <div className="p-5 border-b border-slate-800 bg-slate-900/40 flex items-center justify-between">
-          <h2 className="text-sm font-bold text-white flex items-center gap-2">
-            <DollarSign className="w-4 h-4 text-amber-400" /> Currency & Coin Conversion Rates
-          </h2>
-          <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
-            Global Sync
-          </span>
-        </div>
+      {/* Exchange Rate Card */}
+      <div className="bg-[#0f172a] border border-slate-800 rounded-3xl p-6 md:p-8 space-y-6">
+        <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-800 pb-3">
+          <DollarSign className="w-4 h-4 text-blue-400" />
+          Global Coin Exchange & Currency Rates
+        </h2>
 
-        <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div>
-            <label className="block text-slate-300 font-bold mb-1.5">Coins per 1 USD ($)</label>
+            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+              Coins Per $1.00 USD
+            </label>
             <div className="relative">
-              <input 
-                type="number" value={coinsPerUsd} min={1}
+              <input
+                type="number"
+                min="1"
+                value={coinsPerUsd}
                 onChange={(e) => setCoinsPerUsd(Number(e.target.value))}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white font-bold text-sm"
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-mono font-bold text-amber-400 outline-none focus:border-blue-500"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold">Coins</span>
+              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-500">Coins</span>
             </div>
-            <p className="text-[10px] text-slate-500 mt-1">1 Coin = ${(1 / coinsPerUsd).toFixed(3)} USD</p>
+            <p className="text-[10px] text-slate-500 mt-1">1 Coin = ${(1 / coinsPerUsd).toFixed(4)} USD</p>
           </div>
 
           <div>
-            <label className="block text-slate-300 font-bold mb-1.5">1 USD to PKR Exchange Rate</label>
+            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+              PKR Per $1.00 USD (Exchange Rate)
+            </label>
             <div className="relative">
-              <input 
-                type="number" value={pkrPerUsd} min={1}
+              <input
+                type="number"
+                min="1"
+                value={pkrPerUsd}
                 onChange={(e) => setPkrPerUsd(Number(e.target.value))}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white font-bold text-sm"
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-mono font-bold text-emerald-400 outline-none focus:border-blue-500"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold">PKR</span>
+              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-500">PKR</span>
             </div>
             <p className="text-[10px] text-slate-500 mt-1">1 Coin = Rs {(pkrPerUsd / coinsPerUsd).toFixed(2)} PKR</p>
           </div>
 
           <div>
-            <label className="block text-slate-300 font-bold mb-1.5">Minimum Deposit Limit ($ USD)</label>
+            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+              Minimum Deposit ($ USD)
+            </label>
             <div className="relative">
-              <input 
-                type="number" value={minDepositUsd} min={1}
+              <input
+                type="number"
+                min="1"
+                value={minDepositUsd}
                 onChange={(e) => setMinDepositUsd(Number(e.target.value))}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white font-bold text-sm"
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-mono font-bold text-white outline-none focus:border-blue-500"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold">USD</span>
+              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-500">USD</span>
             </div>
-            <p className="text-[10px] text-slate-500 mt-1">{minDepositUsd * coinsPerUsd} Coins minimum</p>
+            <p className="text-[10px] text-slate-500 mt-1">Min: {minDepositUsd * coinsPerUsd} Coins</p>
           </div>
         </div>
       </div>
 
-      {/* 2. THREE TESTING PACKAGES */}
-      <div>
-        <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
-          <Award className="w-4 h-4 text-blue-400" /> Google Play Testing Packages (Shown in Builder)
+      {/* DYNAMIC LANDING PAGE & BILLING PRICING PLANS */}
+      <div className="bg-[#0f172a] border border-slate-800 rounded-3xl p-6 md:p-8 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+          <div>
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <Award className="w-4 h-4 text-indigo-400" />
+              Landing Page & User Billing Plans
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Edit the exact packages displayed to visitors on the landing page and developers in the billing section.
+            </p>
+          </div>
+
+          <button
+            onClick={handleOpenAddPlan}
+            className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
+          >
+            <Plus className="w-4 h-4" /> Add Custom Plan
+          </button>
+        </div>
+
+        {/* Plan Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {plans.map((plan, idx) => {
+            const usdCost = (plan.coins / coinsPerUsd).toFixed(2);
+            const pkrCost = Math.round((plan.coins / coinsPerUsd) * pkrPerUsd).toLocaleString();
+
+            return (
+              <div 
+                key={plan.id}
+                className={`bg-slate-900 border rounded-3xl p-6 flex flex-col justify-between relative transition ${
+                  plan.popular 
+                    ? 'border-blue-500 shadow-xl shadow-blue-500/10 ring-1 ring-blue-500/30' 
+                    : 'border-slate-800'
+                } ${!plan.enabled ? 'opacity-50' : ''}`}
+              >
+                {plan.popular && (
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-blue-600 text-white text-[9px] font-black uppercase tracking-wider rounded-full shadow-md flex items-center gap-1">
+                    <Star className="w-2.5 h-2.5 fill-white" /> Popular
+                  </span>
+                )}
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="px-2.5 py-0.5 bg-slate-800 text-blue-400 text-[10px] font-bold rounded-lg border border-slate-700">
+                      {plan.badge || 'Plan'}
+                    </span>
+                    <span className={`text-[10px] font-bold ${plan.enabled !== false ? 'text-emerald-400' : 'text-slate-500'}`}>
+                      {plan.enabled !== false ? '● Live' : '○ Hidden'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="text-base font-black text-white">{plan.name}</h3>
+                    <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">{plan.description}</p>
+                  </div>
+
+                  <div className="py-3 border-y border-slate-800/80">
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-2xl font-black text-white font-mono">{plan.coins.toLocaleString()}</span>
+                      <span className="text-xs font-bold text-amber-400">Coins</span>
+                    </div>
+                    <p className="text-xs font-bold text-emerald-400 mt-0.5">
+                      ${usdCost} USD <span className="text-slate-400 font-normal">/ Rs {pkrCost} PKR</span>
+                    </p>
+                  </div>
+
+                  <div className="space-y-1 text-xs text-slate-300">
+                    <p className="flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span><strong>{plan.testers}</strong> Testers</span>
+                    </p>
+                    <p className="flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span><strong>{plan.days}</strong> Testing Days</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-4 mt-4 border-t border-slate-800">
+                  <button
+                    onClick={() => handleOpenEditPlan(idx)}
+                    className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-blue-400 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" /> Edit Plan
+                  </button>
+                  <button
+                    onClick={() => handleDeletePlan(idx)}
+                    className="p-2 bg-slate-800 hover:bg-red-600/30 text-red-400 rounded-xl transition cursor-pointer"
+                    title="Delete Plan"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* PROFIT & COMMISSION SPLITS */}
+      <div className="bg-[#0f172a] border border-slate-800 rounded-3xl p-6 md:p-8 space-y-6">
+        <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 border-b border-slate-800 pb-3">
+          <Sparkles className="w-4 h-4 text-emerald-400" />
+          Tester Reward Splits & Platform Fee %
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">
-          {/* PACKAGE 1 */}
-          <div className="bg-[#0f172a] rounded-2xl border border-blue-500/40 p-5 shadow-lg shadow-blue-500/5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                Play Console Standard
-              </span>
-              <span className="text-[10px] text-emerald-400 font-bold">Mandatory Active</span>
-            </div>
-            <h3 className="text-sm font-black text-white">Google Play Official 20-Tester Track</h3>
-            <p className="text-[11px] text-slate-400 mt-1">Meets Google's 20 testers for 14 continuous days rule.</p>
-
-            <div className="space-y-3 mt-4">
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">Total Cost (Coins):</label>
-                <input 
-                  type="number" value={base20TesterCost}
-                  onChange={(e) => setBase20TesterCost(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold"
-                />
-                <span className="text-[10px] text-emerald-400 font-semibold block mt-0.5">
-                  = ${(base20TesterCost / coinsPerUsd).toFixed(2)} USD (Rs {Math.round((base20TesterCost / coinsPerUsd) * pkrPerUsd)} PKR)
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Testers:</label>
-                  <input 
-                    type="number" value={base20Testers}
-                    onChange={(e) => setBase20Testers(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Days:</label>
-                  <input 
-                    type="number" value={base20Days}
-                    onChange={(e) => setBase20Days(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold"
-                  />
-                </div>
-              </div>
-            </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div>
+            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+              Daily Tester Reward (Coins / Day)
+            </label>
+            <input
+              type="number"
+              value={dailyTesterPayout}
+              onChange={(e) => setDailyTesterPayout(Number(e.target.value))}
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-mono font-bold text-amber-400 outline-none focus:border-blue-500"
+            />
+            <p className="text-[10px] text-slate-500 mt-1">Given to tester on each daily verified check-in.</p>
           </div>
 
-          {/* PACKAGE 2 */}
-          <div className={`bg-[#0f172a] rounded-2xl border p-5 transition ${quickEnabled ? 'border-amber-500/40 shadow-lg shadow-amber-500/5' : 'border-slate-800 opacity-60'}`}>
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                Fast Turnaround
-              </span>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" checked={quickEnabled} 
-                  onChange={(e) => setQuickEnabled(e.target.checked)} 
-                  className="sr-only peer"
-                />
-                <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600"></div>
-              </label>
-            </div>
-            <h3 className="text-sm font-black text-white">Quick Quality Audit</h3>
-            <p className="text-[11px] text-slate-400 mt-1">Lightweight 10 testers for 7 days bug sweep.</p>
-
-            <div className="space-y-3 mt-4">
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">Total Cost (Coins):</label>
-                <input 
-                  type="number" value={quickCoins}
-                  onChange={(e) => setQuickCoins(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold"
-                />
-                <span className="text-[10px] text-emerald-400 font-semibold block mt-0.5">
-                  = ${(quickCoins / coinsPerUsd).toFixed(2)} USD (Rs {Math.round((quickCoins / coinsPerUsd) * pkrPerUsd)} PKR)
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Testers:</label>
-                  <input 
-                    type="number" value={quickTesters}
-                    onChange={(e) => setQuickTesters(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Days:</label>
-                  <input 
-                    type="number" value={quickDays}
-                    onChange={(e) => setQuickDays(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold"
-                  />
-                </div>
-              </div>
-            </div>
+          <div>
+            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+              14-Day Completion Bonus (Coins)
+            </label>
+            <input
+              type="number"
+              value={completionBonus}
+              onChange={(e) => setCompletionBonus(Number(e.target.value))}
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-mono font-bold text-amber-400 outline-none focus:border-blue-500"
+            />
+            <p className="text-[10px] text-slate-500 mt-1">Bonus for completing all 14 consecutive days.</p>
           </div>
 
-          {/* PACKAGE 3 */}
-          <div className={`bg-[#0f172a] rounded-2xl border p-5 transition ${proEnabled ? 'border-purple-500/40 shadow-lg shadow-purple-500/5' : 'border-slate-800 opacity-60'}`}>
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                Enterprise
-              </span>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" checked={proEnabled} 
-                  onChange={(e) => setProEnabled(e.target.checked)} 
-                  className="sr-only peer"
-                />
-                <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
-              </label>
-            </div>
-            <h3 className="text-sm font-black text-white">Enterprise Studio Coverage</h3>
-            <p className="text-[11px] text-slate-400 mt-1">Extensive 30 testers for 14 full days.</p>
-
-            <div className="space-y-3 mt-4">
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">Total Cost (Coins):</label>
-                <input 
-                  type="number" value={proCoins}
-                  onChange={(e) => setProCoins(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold"
-                />
-                <span className="text-[10px] text-emerald-400 font-semibold block mt-0.5">
-                  = ${(proCoins / coinsPerUsd).toFixed(2)} USD (Rs {Math.round((proCoins / coinsPerUsd) * pkrPerUsd)} PKR)
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Testers:</label>
-                  <input 
-                    type="number" value={proTesters}
-                    onChange={(e) => setProTesters(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Days:</label>
-                  <input 
-                    type="number" value={proDays}
-                    onChange={(e) => setProDays(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold"
-                  />
-                </div>
-              </div>
-            </div>
+          <div>
+            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+              Platform Gross Margin / Fee %
+            </label>
+            <input
+              type="number"
+              value={platformFeePercent}
+              onChange={(e) => setPlatformFeePercent(Number(e.target.value))}
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-mono font-bold text-emerald-400 outline-none focus:border-blue-500"
+            />
+            <p className="text-[10px] text-slate-500 mt-1">Retained SaaS profit margin.</p>
           </div>
         </div>
       </div>
 
-      {/* 3. SIMULATOR */}
-      <div className="bg-gradient-to-br from-slate-900 to-indigo-950/40 p-6 rounded-2xl border border-indigo-500/20">
-        <h2 className="text-sm font-bold text-white flex items-center gap-2 mb-3">
-          <RefreshCw className="w-4 h-4 text-indigo-400" /> Live Campaign Cost & Profit Simulator
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">
-          <div className="space-y-4">
-            <div>
-              <div className="flex justify-between text-xs text-slate-400 mb-1 font-semibold">
-                <span>Testers Count:</span>
-                <span className="text-indigo-400 font-black">{simTesters} Testers</span>
-              </div>
+      {/* Simulator */}
+      <div className="bg-[#0f172a] border border-slate-800 rounded-3xl p-6 md:p-8 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+            <Layers className="w-4 h-4 text-blue-400" />
+            Live Revenue & Profit Simulator
+          </h3>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-700">
+              <span className="text-[10px] text-slate-400 font-bold">Testers:</span>
               <input 
-                type="range" min={10} max={50} step={5} value={simTesters}
-                onChange={(e) => setSimTesters(Number(e.target.value))}
-                className="w-full accent-indigo-500 cursor-pointer"
+                type="number" 
+                min="1" 
+                value={simTesters} 
+                onChange={(e) => setSimTesters(Number(e.target.value))} 
+                className="w-12 bg-transparent text-xs font-bold text-white outline-none font-mono text-center" 
               />
             </div>
-            <div>
-              <div className="flex justify-between text-xs text-slate-400 mb-1 font-semibold">
-                <span>Duration (Days):</span>
-                <span className="text-indigo-400 font-black">{simDays} Days</span>
-              </div>
+            <div className="flex items-center gap-1.5 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-700">
+              <span className="text-[10px] text-slate-400 font-bold">Days:</span>
               <input 
-                type="range" min={7} max={30} step={7} value={simDays}
-                onChange={(e) => setSimDays(Number(e.target.value))}
-                className="w-full accent-indigo-500 cursor-pointer"
+                type="number" 
+                min="1" 
+                value={simDays} 
+                onChange={(e) => setSimDays(Number(e.target.value))} 
+                className="w-12 bg-transparent text-xs font-bold text-white outline-none font-mono text-center" 
               />
             </div>
           </div>
+        </div>
 
-          <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 flex flex-col justify-center">
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total Charged to Customer</span>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-black text-amber-400">{simTotalCost.toLocaleString()} Coins</span>
-            </div>
-            <p className="text-xs text-emerald-400 font-bold mt-1">≈ ${simTotalUsd} USD (Rs {simTotalPkr.toLocaleString()} PKR)</p>
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2">
+          <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800">
+            <span className="text-[10px] text-slate-400 uppercase font-bold">Campaign Size</span>
+            <p className="text-lg font-black text-white mt-1">{simTesters} Testers / {simDays} Days</p>
           </div>
 
-          <div className="bg-indigo-950/30 p-4 rounded-xl border border-indigo-500/20 flex flex-col justify-center">
-            <span className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider">Platform Net Profit ({platformFeePercent}%)</span>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-black text-indigo-400">${simPlatformProfitUsd} USD</span>
-            </div>
-            <p className="text-xs text-indigo-300 font-medium mt-1">Direct Profit per this campaign</p>
+          <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800">
+            <span className="text-[10px] text-slate-400 uppercase font-bold">Customer Pays</span>
+            <p className="text-lg font-black text-amber-400 font-mono mt-1">{simTotalCost.toLocaleString()} Coins</p>
+            <p className="text-[10px] text-slate-500">${simTotalUsd} USD (Rs {simTotalPkr.toLocaleString()} PKR)</p>
+          </div>
+
+          <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800">
+            <span className="text-[10px] text-slate-400 uppercase font-bold">Platform Margin ({platformFeePercent}%)</span>
+            <p className="text-lg font-black text-emerald-400 font-mono mt-1">${simPlatformProfitUsd} USD</p>
+            <p className="text-[10px] text-slate-500">Pure Net Profit</p>
+          </div>
+
+          <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800">
+            <span className="text-[10px] text-slate-400 uppercase font-bold">Testers Payout Pool</span>
+            <p className="text-lg font-black text-blue-400 font-mono mt-1">${((simTotalCost / coinsPerUsd) * ((100 - platformFeePercent) / 100)).toFixed(2)} USD</p>
+            <p className="text-[10px] text-slate-500">Disbursed to certified testers</p>
           </div>
         </div>
       </div>
+
+      {/* PLAN EDIT / CREATE MODAL */}
+      {showPlanModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#0f172a] border border-slate-800 rounded-3xl max-w-lg w-full p-6 md:p-8 space-y-4 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div>
+                <h3 className="text-base font-bold text-white">
+                  {editingPlanIndex !== null ? 'Edit Pricing Plan' : 'Create New Pricing Plan'}
+                </h3>
+                <p className="text-xs text-slate-400">Updates live on Landing Page and Customer Billing.</p>
+              </div>
+              <button onClick={() => setShowPlanModal(false)} className="text-slate-400 hover:text-white text-lg font-bold cursor-pointer">✕</button>
+            </div>
+
+            <form onSubmit={handleSavePlanItem} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-300 uppercase tracking-wider text-[10px] mb-1">
+                  Plan Title / Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={planName}
+                  onChange={(e) => setPlanName(e.target.value)}
+                  placeholder="e.g. Google Play 14-Day Pack"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 outline-none focus:border-blue-500 font-bold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-300 uppercase tracking-wider text-[10px] mb-1">
+                    Coins Cost
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="100"
+                    value={planCoins}
+                    onChange={(e) => setPlanCoins(Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-mono font-bold text-amber-400 outline-none focus:border-blue-500"
+                  />
+                  <p className="text-[10px] text-emerald-400 mt-1">
+                    ≈ ${(planCoins / coinsPerUsd).toFixed(2)} USD / Rs {Math.round((planCoins / coinsPerUsd) * pkrPerUsd).toLocaleString()} PKR
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-300 uppercase tracking-wider text-[10px] mb-1">
+                    Badge Tag (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={planBadge}
+                    onChange={(e) => setPlanBadge(e.target.value)}
+                    placeholder="e.g. Most Popular"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-300 uppercase tracking-wider text-[10px] mb-1">
+                    Target Testers
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={planTesters}
+                    onChange={(e) => setPlanTesters(Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-mono text-white outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-300 uppercase tracking-wider text-[10px] mb-1">
+                    Testing Duration (Days)
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={planDays}
+                    onChange={(e) => setPlanDays(Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-mono text-white outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-300 uppercase tracking-wider text-[10px] mb-1">
+                  Plan Description
+                </label>
+                <textarea
+                  rows={2}
+                  value={planDesc}
+                  onChange={(e) => setPlanDesc(e.target.value)}
+                  placeholder="Brief summary of the plan's ideal use-case."
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-slate-300 outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-300 uppercase tracking-wider text-[10px] mb-1">
+                  Features Bullet Points (One per line)
+                </label>
+                <textarea
+                  rows={3}
+                  value={planFeaturesText}
+                  onChange={(e) => setPlanFeaturesText(e.target.value)}
+                  placeholder="20 Verified Testers on real Android devices&#10;14 Continuous Days active track&#10;Free replacement guarantee"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs font-mono text-slate-300 outline-none focus:border-blue-500 leading-relaxed"
+                />
+              </div>
+
+              <div className="flex items-center gap-6 pt-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="pop"
+                    checked={planPopular}
+                    onChange={(e) => setPlanPopular(e.target.checked)}
+                    className="w-4 h-4 rounded text-blue-600"
+                  />
+                  <label htmlFor="pop" className="text-xs font-bold text-white cursor-pointer">
+                    Highlight as Most Popular
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="enab"
+                    checked={planEnabled}
+                    onChange={(e) => setPlanEnabled(e.target.checked)}
+                    className="w-4 h-4 rounded text-emerald-600"
+                  />
+                  <label htmlFor="enab" className="text-xs font-bold text-white cursor-pointer">
+                    Enabled (Live)
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowPlanModal(false)}
+                  className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl transition shadow-md shadow-blue-500/20 cursor-pointer"
+                >
+                  Update Plan in List
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

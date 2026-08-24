@@ -277,40 +277,34 @@ export default function CustomerBilling() {
   const selectedManualData = rates.manualMethods ? (rates.manualMethods as any)[effectiveManualKey] : null;
   const selectedApiData = rates.apiGateways ? (rates.apiGateways as any)[effectiveApiKey] : null;
 
-  const plans = [
-    {
-      id: 'starter',
-      name: 'Starter Test Pack',
-      coins: rates.quickCoins || 1000,
-      badge: 'Quick Test',
-      description: `Ideal for ${rates.quickTesters || 10} testers for ${rates.quickDays || 7} days quick audit.`,
-      popular: false
-    },
-    {
-      id: 'playstore',
-      name: 'Google Play 14-Day Pack',
-      coins: rates.base20TesterCost || 2000,
-      badge: 'Recommended by Google',
-      description: `Full ${rates.base20Testers || 20} verified testers for ${rates.base20Days || 14} continuous days to meet Google Play Console requirements.`,
-      popular: true
-    },
-    {
-      id: 'growth',
-      name: 'Growth Multi-App Pack',
-      coins: (rates.base20TesterCost || 2000) * 2.5,
-      badge: 'Best Value',
-      description: 'Test 2-3 apps simultaneously with 20+ testers.',
-      popular: false
-    },
-    {
-      id: 'agency',
-      name: 'Enterprise Agency Suite',
-      coins: rates.proCoins || 10000,
-      badge: 'VIP Coverage',
-      description: `High volume app testing for studios with ${rates.proTesters || 30} testers for ${rates.proDays || 14} days.`,
-      popular: false
-    },
-  ];
+  const plans = rates.plans && rates.plans.length > 0 
+    ? rates.plans.filter(p => p.enabled !== false)
+    : [
+        {
+          id: 'quick',
+          name: 'Quick Audit Pack',
+          coins: 1000,
+          badge: 'Preliminary Feedback',
+          description: 'Best for preliminary feedback and quick UX telemetry before closed testing.',
+          popular: false
+        },
+        {
+          id: 'googleplay',
+          name: 'Google Play 14-Day Pack',
+          coins: 2000,
+          badge: 'Most Popular for Google Play',
+          description: 'Full closed testing package designed to meet Google Play Console production requirements.',
+          popular: true
+        },
+        {
+          id: 'growth',
+          name: 'Studio Multi-App Pack',
+          coins: 5000,
+          badge: 'VIP Agency Coverage',
+          description: 'High priority VIP testing for gaming studios and agencies managing multiple apps.',
+          popular: false
+        }
+      ];
 
   return (
     <ProtectedRoute allowedRoles={['customer', 'tester', 'earner']}>

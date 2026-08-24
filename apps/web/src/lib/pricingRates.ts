@@ -77,6 +77,19 @@ export interface WithdrawalMethodsConfig {
   sadapay: WithdrawalMethodDetail;
 }
 
+export interface PricingPlanItem {
+  id: string;
+  name: string;
+  coins: number;
+  badge?: string;
+  description: string;
+  testers: number;
+  days: number;
+  popular?: boolean;
+  enabled?: boolean;
+  features?: string[];
+}
+
 export interface PricingRates {
   coinsPerUsd: number;
   pkrPerUsd: number;
@@ -112,11 +125,67 @@ export interface PricingRates {
   payoneerEmail: string;
   usdtAddress: string;
   
+  // Custom Dynamic Plans (Editable in SaaS Panel)
+  plans?: PricingPlanItem[];
+
   // Advance Payment Gateways & Manual Accounts Setup
   manualMethods?: ManualPaymentMethods;
   apiGateways?: ApiPaymentGateways;
   withdrawalMethods?: WithdrawalMethodsConfig;
 }
+
+export const DEFAULT_PLANS: PricingPlanItem[] = [
+  {
+    id: 'quick',
+    name: 'Quick Audit Pack',
+    coins: 1000,
+    badge: 'Preliminary Feedback',
+    description: 'Best for preliminary feedback and quick UX telemetry before closed testing.',
+    testers: 10,
+    days: 7,
+    popular: false,
+    enabled: true,
+    features: [
+      '10 Testers on real Android devices',
+      '7 Days active testing track',
+      'Free replacement guarantee'
+    ]
+  },
+  {
+    id: 'googleplay',
+    name: 'Google Play 14-Day Pack',
+    coins: 2000,
+    badge: 'Most Popular for Google Play',
+    description: 'Full closed testing package designed to meet Google Play Console production requirements.',
+    testers: 20,
+    days: 14,
+    popular: true,
+    enabled: true,
+    features: [
+      '20 Verified Testers on real Android devices',
+      '14 Continuous Days active testing track',
+      'Free replacement guarantee',
+      'Production evaluation telemetry report'
+    ]
+  },
+  {
+    id: 'growth',
+    name: 'Studio Multi-App Pack',
+    coins: 5000,
+    badge: 'VIP Agency Coverage',
+    description: 'High priority VIP testing for gaming studios and agencies managing multiple apps.',
+    testers: 30,
+    days: 14,
+    popular: false,
+    enabled: true,
+    features: [
+      '30+ Testers on real Android devices',
+      '14 Days / Multi-App active testing track',
+      'Free replacement guarantee',
+      'Priority 24/7 support desk'
+    ]
+  }
+];
 
 export const DEFAULT_MANUAL_METHODS: ManualPaymentMethods = {
   easypaisa: {
@@ -346,6 +415,7 @@ export const DEFAULT_PRICING_RATES: PricingRates = {
   bankDetails: 'Meezan Bank, Acc: 1234567890 (Umar Hayat)',
   payoneerEmail: 'pay@12testgig.com',
   usdtAddress: 'USDT TRC20: T9yD14Nj9yDbv... (Binance Pay)',
+  plans: DEFAULT_PLANS,
   manualMethods: DEFAULT_MANUAL_METHODS,
   apiGateways: DEFAULT_API_GATEWAYS,
   withdrawalMethods: DEFAULT_WITHDRAWAL_METHODS,
@@ -355,10 +425,14 @@ function normalizePricingRates(data: any): PricingRates {
   const manual = { ...DEFAULT_MANUAL_METHODS, ...(data?.manualMethods || {}) };
   const api = { ...DEFAULT_API_GATEWAYS, ...(data?.apiGateways || {}) };
   const withdraw = { ...DEFAULT_WITHDRAWAL_METHODS, ...(data?.withdrawalMethods || {}) };
+  const customPlans = data?.plans && Array.isArray(data.plans) && data.plans.length > 0
+    ? data.plans
+    : DEFAULT_PLANS;
 
   return {
     ...DEFAULT_PRICING_RATES,
     ...data,
+    plans: customPlans,
     manualMethods: manual,
     apiGateways: api,
     withdrawalMethods: withdraw,
