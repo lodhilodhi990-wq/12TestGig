@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Eye, Coins, Search, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
-import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 export interface Deposit {
@@ -74,16 +74,37 @@ export default function Deposits() {
     }
   }, []);
 
-  const handleStatusChange = async (id: string, newStatus: 'approved' | 'rejected') => {
+  const handleStatusChange = async (depItem: Deposit, newStatus: 'approved' | 'rejected') => {
     try {
-      const depositRef = doc(db, 'deposits', id);
+      const depositRef = doc(db, 'deposits', depItem.id);
       await updateDoc(depositRef, {
         status: newStatus,
         updatedAt: new Date().toISOString()
       });
 
-      setDeposits(prev => prev.map(d => d.id === id ? { ...d, status: newStatus } : d));
-      if (selectedReceipt && selectedReceipt.id === id) {
+      // If approved, automatically credit coins to the user's Firestore account
+      if (newStatus === 'approved' && depItem.coinsNumber) {
+        if (depItem.userId) {
+          try {
+            const userRef = doc(db, 'users', depItem.userId);
+            const userSnap = await getDoc(userRef);
+            if (userSnap.exists()) {
+              const current = Number(userSnap.data()?.coinsBalance || userSnap.data()?.coins || 0);
+              const newBal = current + depItem.coinsNumber;
+              await updateDoc(userRef, {
+                coinsBalance: newBal,
+                coins: newBal,
+                updatedAt: new Date().toISOString()
+              });
+            }
+          } catch (uErr) {
+            console.warn('Failed to auto-increment user coins balance:', uErr);
+          }
+        }
+      }
+
+      setDeposits(prev => prev.map(d => d.id === depItem.id ? { ...d, status: newStatus } : d));
+      if (selectedReceipt && selectedReceipt.id === depItem.id) {
         setSelectedReceipt(prev => prev ? { ...prev, status: newStatus } : null);
       }
     } catch (err) {
@@ -264,14 +285,14 @@ export default function Deposits() {
                         {dep.status === 'pending' && (
                           <>
                             <button
-                              onClick={() => handleStatusChange(dep.id, 'approved')}
-                              className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white rounded-lg font-bold transition text-[11px] border border-emerald-500/30"
+                              onClick={() => handleStatusChange(dep, 'approved')}
+                              className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white rounded-lg font-bold transition text-[11px] border border-emerald-500/30 cursor-pointer"
                             >
                               Approve
                             </button>
                             <button
-                              onClick={() => handleStatusChange(dep.id, 'rejected')}
-                              className="px-2.5 py-1 bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white rounded-lg font-bold transition text-[11px] border border-red-500/30"
+                              onClick={() => handleStatusChange(dep, 'rejected')}
+                              className="px-2.5 py-1 bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white rounded-lg font-bold transition text-[11px] border border-red-500/30 cursor-pointer"
                             >
                               Reject
                             </button>
@@ -296,7 +317,7 @@ export default function Deposits() {
                 <h3 className="text-sm font-bold text-white">Payment Receipt Proof</h3>
                 <p className="text-[11px] text-slate-400">{selectedReceipt.userName} ({selectedReceipt.userEmail})</p>
               </div>
-              <button onClick={() => setSelectedReceipt(null)} className="text-slate-400 hover:text-white text-lg font-bold">✕</button>
+              <button onClick={() => setSelectedReceipt(null)} className="text-slate-400 hover:text-white text-lg font-bold cursor-pointer">✕</button>
             </div>
 
             <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 text-xs space-y-2">
@@ -333,14 +354,14 @@ export default function Deposits() {
               {selectedReceipt.status === 'pending' ? (
                 <>
                   <button
-                    onClick={() => handleStatusChange(selectedReceipt.id, 'approved')}
-                    className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition"
+                    onClick={() => handleStatusChange(selectedReceipt, 'approved')}
+                    className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition cursor-pointer"
                   >
                     ✓ Approve & Credit Coins
                   </button>
                   <button
-                    onClick={() => handleStatusChange(selectedReceipt.id, 'rejected')}
-                    className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl transition"
+                    onClick={() => handleStatusChange(selectedReceipt, 'rejected')}
+                    className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl transition cursor-pointer"
                   >
                     ✕ Reject Receipt
                   </button>
@@ -348,7 +369,7 @@ export default function Deposits() {
               ) : (
                 <button
                   onClick={() => setSelectedReceipt(null)}
-                  className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl transition"
+                  className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl transition cursor-pointer"
                 >
                   Close
                 </button>

@@ -23,6 +23,9 @@ import {
   HelpCircle
 } from 'lucide-react';
 
+import { db } from '@/lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
+
 interface NavItem {
   name: string;
   href: string;
@@ -37,22 +40,42 @@ interface NavSection {
 
 export default function UserLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { logout, user } = useAuth();
+  const { logout, user, firebaseUser } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [coinsBalance, setCoinsBalance] = useState<number>(0);
 
+  const userId = firebaseUser?.uid || user?.id;
+
   React.useEffect(() => {
+    // 1. Initial cached value
     try {
       const saved = localStorage.getItem('user_coins_balance');
-      if (saved) {
-        setCoinsBalance(Number(saved));
-      } else {
-        setCoinsBalance(0);
-      }
+      if (saved) setCoinsBalance(Number(saved));
     } catch (e) {
       console.error(e);
     }
-  }, []);
+
+    // 2. Real-time Firestore sync if user is logged in
+    if (userId) {
+      try {
+        const unsubUser = onSnapshot(doc(db, 'users', userId), (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            const bal = data.coinsBalance !== undefined ? Number(data.coinsBalance) :
+                        data.coins !== undefined ? Number(data.coins) : 0;
+            setCoinsBalance(bal);
+            localStorage.setItem('user_coins_balance', String(bal));
+          }
+        }, (err) => {
+          console.warn('UserLayout coin balance listener notice:', err);
+        });
+
+        return () => unsubUser();
+      } catch (err) {
+        console.warn('Realtime coin balance hook error:', err);
+      }
+    }
+  }, [userId]);
 
   const sections: NavSection[] = [
     {
