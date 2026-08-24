@@ -15,6 +15,8 @@ import DepositMethods from './pages/DepositMethods';
 import WithdrawalSettings from './pages/WithdrawalSettings';
 import ApiGateways from './pages/ApiGateways';
 import SecurityRules from './pages/SecurityRules';
+import BlogManager from './pages/BlogManager';
+import AdSenseManager from './pages/AdSenseManager';
 import Login from './pages/Login';
 
 function Layout({ children }: { children: React.ReactNode }) {
@@ -79,6 +81,10 @@ function App() {
                 <Route path="/withdrawal-settings" element={<WithdrawalSettings />} />
                 <Route path="/api-gateways" element={<ApiGateways />} />
                 <Route path="/security-rules" element={<SecurityRules />} />
+
+                {/* CMS & Marketing Routes */}
+                <Route path="/blog-manager" element={<BlogManager />} />
+                <Route path="/adsense-manager" element={<AdSenseManager />} />
 
                 {/* Legacy settings redirect */}
                 <Route path="/settings" element={<Navigate to="/pricing" replace />} />

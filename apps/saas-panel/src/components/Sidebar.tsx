@@ -11,7 +11,9 @@ import {
   DollarSign,
   Smartphone,
   CreditCard,
-  ShieldCheck
+  ShieldCheck,
+  BookOpen,
+  Sparkles
 } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { signOut } from 'firebase/auth';
@@ -40,6 +42,11 @@ export default function Sidebar() {
     { path: '/withdrawal-settings', label: 'Withdrawal Settings', icon: CreditCard },
     { path: '/api-gateways', label: 'Auto-Verify APIs', icon: Zap },
     { path: '/security-rules', label: 'Security & Webhooks', icon: ShieldCheck },
+  ];
+
+  const marketingCms = [
+    { path: '/blog-manager', label: 'SEO Blog & Guides', icon: BookOpen, badge: 'CMS' },
+    { path: '/adsense-manager', label: 'Google AdSense Ads', icon: Sparkles, badge: 'Monetize' },
   ];
 
   return (
@@ -113,27 +120,54 @@ export default function Sidebar() {
             ))}
           </div>
         </div>
-      </nav>
 
-      {/* User & Sign Out Footer */}
-      <div className="p-3 border-t border-slate-800/80 bg-slate-900/40">
-        <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl mb-2 bg-slate-900/60 border border-slate-800/60">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-xs shrink-0">
-            {currentUser?.displayName ? currentUser.displayName.charAt(0).toUpperCase() : 'A'}
-          </div>
-          <div className="overflow-hidden flex-1">
-            <p className="text-xs font-bold text-white truncate">
-              {currentUser?.displayName || 'Admin Console'}
-            </p>
-            <p className="text-[10px] text-slate-400 truncate">
-              {currentUser?.email || 'admin@12testgig.com'}
-            </p>
+        {/* Section 3: Marketing & CMS */}
+        <div>
+          <p className="px-2 pb-1.5 text-[10px] font-extrabold text-slate-500 tracking-wider uppercase">CMS & Marketing</p>
+          <div className="space-y-0.5">
+            {marketingCms.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) =>
+                  `flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all duration-150 ${
+                    isActive 
+                      ? 'bg-indigo-600/15 text-indigo-400 font-bold border border-indigo-500/30 shadow-[0_0_8px_rgba(99,102,241,0.15)]' 
+                      : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 font-medium'
+                  }`
+                }
+              >
+                <div className="flex items-center gap-2.5">
+                  <item.icon className="w-4 h-4 shrink-0" />
+                  <span className="truncate">{item.label}</span>
+                </div>
+                {item.badge && (
+                  <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-indigo-500/20 text-indigo-300 font-bold border border-indigo-500/30">
+                    {item.badge}
+                  </span>
+                )}
+              </NavLink>
+            ))}
           </div>
         </div>
+      </nav>
 
+      {/* User Footer */}
+      <div className="p-3 border-t border-slate-800/80 bg-[#080d1a]">
+        <div className="flex items-center justify-between px-2 py-1 mb-2">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-[10px] font-black text-white">
+              {currentUser?.email?.[0].toUpperCase() || 'A'}
+            </div>
+            <div className="overflow-hidden">
+              <span className="text-[11px] font-bold text-white block truncate">{currentUser?.email?.split('@')[0] || 'SuperAdmin'}</span>
+              <span className="text-[9px] text-emerald-400 block font-mono">Master Mode</span>
+            </div>
+          </div>
+        </div>
         <button
           onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-red-400 hover:bg-red-500/10 hover:text-red-300 transition cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 py-1.5 bg-slate-900 hover:bg-red-500/10 text-slate-400 hover:text-red-400 border border-slate-800 hover:border-red-500/30 rounded-xl text-[11px] font-bold transition-all cursor-pointer"
         >
           <LogOut className="w-3.5 h-3.5" />
           Sign Out
