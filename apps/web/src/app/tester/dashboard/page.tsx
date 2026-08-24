@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import UserLayout from '@/components/UserLayout';
+import { useAuth } from '@/context/AuthContext';
+import { generateDefaultReferralCode, buildReferralUrl, getPartnerStats } from '@/lib/referralService';
 import { 
   Coins, 
   ArrowUpRight, 
@@ -21,6 +23,7 @@ import {
 import Link from 'next/link';
 
 export default function UnifiedDashboard() {
+  const { user } = useAuth();
   const [copied, setCopied] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [showDeposit, setShowDeposit] = useState(false);
@@ -29,6 +32,7 @@ export default function UnifiedDashboard() {
   const [activeTestingTasks, setActiveTestingTasks] = useState<any[]>([]);
   const [myAppCampaigns, setMyAppCampaigns] = useState<any[]>([]);
   const [availableAppsToTest, setAvailableAppsToTest] = useState<any[]>([]);
+  const [referralEarnings, setReferralEarnings] = useState<number>(0);
 
   useEffect(() => {
     try {
@@ -54,8 +58,19 @@ export default function UnifiedDashboard() {
     }
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      getPartnerStats(user).then((res) => {
+        setReferralEarnings(res.stats.totalCommissionEarned || 0);
+      });
+    }
+  }, [user]);
+
+  const partnerCode = generateDefaultReferralCode(user);
+  const inviteUrl = buildReferralUrl(partnerCode, 'tester-dashboard', 'direct');
+
   const copyReferral = () => {
-    navigator.clipboard.writeText('https://12-test-gig.vercel.app/register?ref=partner-123');
+    navigator.clipboard.writeText(inviteUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -64,7 +79,7 @@ export default function UnifiedDashboard() {
     { title: 'Total Coins', value: `${coinsBalance.toLocaleString()} Coins`, sub: `≈ $${(coinsBalance / 100).toFixed(2)} USD`, icon: Coins, color: 'text-amber-500', bg: 'bg-amber-50' },
     { title: 'My Active Tests', value: `${activeTestingTasks.length} Apps`, sub: '14-Day Google Play Tracks', icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50' },
     { title: 'My App Campaigns', value: `${myAppCampaigns.length} Apps`, sub: 'Testers Assigned', icon: Rocket, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-    { title: 'Referral Earnings', value: '0 Coins', sub: '10% Lifetime Bonus', icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { title: 'Referral Earnings', value: `${referralEarnings.toLocaleString()} Coins`, sub: '10% Lifetime Bonus', icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
   ];
 
   return (
@@ -104,12 +119,12 @@ export default function UnifiedDashboard() {
                     >
                       Withdraw
                     </button>
-                    <button 
-                      onClick={() => setShowDeposit(true)}
+                    <Link 
+                      href="/customer/billing"
                       className="flex-1 px-3 py-1.5 bg-blue-500/80 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition text-center border border-white/20"
                     >
                       + Buy Coins
-                    </button>
+                    </Link>
                   </div>
                 </div>
               </div>

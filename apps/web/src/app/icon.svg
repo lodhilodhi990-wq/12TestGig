@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563EB"/>
+      <stop offset="50%" stop-color="#4F46E5"/>
+      <stop offset="100%" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#60A5FA" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#3B82F6" stop-opacity="0.2"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#1E1B4B" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Rounded App Icon Background -->
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="url(#bgGrad)" filter="url(#shadow)"/>
+  
+  <!-- Subtle border highlight -->
+  <rect x="9" y="9" width="110" height="110" rx="27" fill="none" stroke="rgba(255, 255, 255, 0.25)" stroke-width="2"/>
+
+  <!-- Stylized 12 & Code Symbol -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Left Bracket < -->
+    <path d="M 40 46 L 24 64 L 40 82" />
+    
+    <!-- Right Bracket > -->
+    <path d="M 88 46 L 104 64 L 88 82" />
+  </g>
+
+  <!-- "12" in center -->
+  <text x="64" y="73" 
+        font-family="system-ui, -apple-system, sans-serif" 
+        font-size="34" 
+        font-weight="900" 
+        fill="#FFFFFF" 
+        text-anchor="middle" 
+        letter-spacing="-1">12</text>
+
+  <!-- Sparkle Accent -->
+  <polygon points="98,28 101,34 107,37 101,40 98,46 95,40 89,37 95,34" fill="#FBBF24"/>
+</svg>

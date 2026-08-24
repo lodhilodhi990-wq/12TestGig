@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563EB"/>
+      <stop offset="50%" stop-color="#4F46E5"/>
+      <stop offset="100%" stop-color="#7C3AED"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="url(#bgGrad)"/>
+  <rect x="9" y="9" width="110" height="110" rx="27" fill="none" stroke="rgba(255, 255, 255, 0.25)" stroke-width="2"/>
+
+  <g fill="none" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 40 46 L 24 64 L 40 82" />
+    <path d="M 88 46 L 104 64 L 88 82" />
+  </g>
+
+  <text x="64" y="73" 
+        font-family="system-ui, -apple-system, sans-serif" 
+        font-size="34" 
+        font-weight="900" 
+        fill="#FFFFFF" 
+        text-anchor="middle" 
+        letter-spacing="-1">12</text>
+
+  <polygon points="98,28 101,34 107,37 101,40 98,46 95,40 89,37 95,34" fill="#FBBF24"/>
+</svg>

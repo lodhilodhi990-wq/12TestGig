@@ -1,0 +1,26 @@
+{
+  "name": "12 Test Gig - App Testing & 20-Tester Hub",
+  "short_name": "12 Test Gig",
+  "description": "Google Play 20-Tester Closed Testing tracks & App Testing Earn Platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563EB",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

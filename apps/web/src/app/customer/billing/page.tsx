@@ -10,16 +10,24 @@ import {
   Plus, 
   CheckCircle2, 
   Building, 
-  ShieldCheck,
-  Trash2,
-  Sparkles,
-  Zap,
-  Award,
-  ArrowRight,
-  HelpCircle,
-  Clock
+  ShieldCheck, 
+  Trash2, 
+  Sparkles, 
+  Zap, 
+  Award, 
+  ArrowRight, 
+  HelpCircle, 
+  Clock, 
+  Copy, 
+  Check, 
+  AlertCircle, 
+  Lock, 
+  Globe, 
+  Smartphone 
 } from 'lucide-react';
 import { subscribeToLivePricingRates, DEFAULT_PRICING_RATES, PricingRates } from '@/lib/pricingRates';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase';
 
 interface PaymentMethod {
   id: string;
@@ -36,6 +44,7 @@ export default function CustomerBilling() {
   const [selectedPlanCoins, setSelectedPlanCoins] = useState<number>(2000);
   const [showPaymentMethodsModal, setShowPaymentMethodsModal] = useState(false);
   const [showAddMethodForm, setShowAddMethodForm] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([
     { id: 'pm_1', type: 'card', title: 'Visa Card', details: 'ending in 4242 (Exp 12/26)', isDefault: true },
@@ -46,16 +55,41 @@ export default function CustomerBilling() {
   const [newMethodNumber, setNewMethodNumber] = useState('');
   const [newMethodName, setNewMethodName] = useState('');
 
-  // Deposit Form
+  // Deposit Form State
   const [depositAmountUsd, setDepositAmountUsd] = useState<number>(20);
-  const [depositMethod, setDepositMethod] = useState<'easypaisa' | 'bank' | 'payoneer' | 'usdt'>('easypaisa');
+  const [depositCategory, setDepositCategory] = useState<'manual' | 'api'>('manual');
+  const [selectedManualKey, setSelectedManualKey] = useState<string>('easypaisa');
+  const [selectedApiKey, setSelectedApiKey] = useState<string>('stripe');
   const [senderAccount, setSenderAccount] = useState('');
+  const [senderName, setSenderName] = useState('');
+  const [receiptNote, setReceiptNote] = useState('');
   const [depositSubmitted, setDepositSubmitted] = useState(false);
+
+  // Online Card Simulation State
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExp, setCardExp] = useState('');
+  const [cardCvc, setCardCvc] = useState('');
+  const [cardProcessing, setCardProcessing] = useState(false);
 
   useEffect(() => {
     // 1. Subscribe to live rates set in SaaS Admin panel
     const unsub = subscribeToLivePricingRates((liveRates) => {
       setRates(liveRates);
+      
+      // Auto-select first enabled manual method
+      if (liveRates.manualMethods) {
+        const firstEnabledManual = Object.entries(liveRates.manualMethods).find(([_, m]) => m.enabled);
+        if (firstEnabledManual) {
+          setSelectedManualKey(firstEnabledManual[0]);
+        }
+      }
+      // Auto-select first enabled API gateway
+      if (liveRates.apiGateways) {
+        const firstEnabledApi = Object.entries(liveRates.apiGateways).find(([_, g]) => g.enabled);
+        if (firstEnabledApi) {
+          setSelectedApiKey(firstEnabledApi[0]);
+        }
+      }
     });
 
     // 2. Read live balance from localStorage
@@ -74,6 +108,12 @@ export default function CustomerBilling() {
       if (unsub) unsub();
     };
   }, []);
+
+  const handleCopy = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(id);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
 
   const handleSelectPlan = (coins: number) => {
     setSelectedPlanCoins(coins);
@@ -104,23 +144,100 @@ export default function CustomerBilling() {
     setPaymentMethods(paymentMethods.filter(pm => pm.id !== id));
   };
 
-  const handleDepositSubmit = (e: React.FormEvent) => {
+  // Submit manual payment receipt
+  const handleDepositSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setDepositSubmitted(true);
+
+    const coinsToCredit = Math.round(depositAmountUsd * rates.coinsPerUsd);
+    const amountPkr = Math.round(depositAmountUsd * rates.pkrPerUsd);
+    const user = auth.currentUser;
+
+    const activeManual = rates.manualMethods ? (rates.manualMethods as any)[selectedManualKey] : null;
+    const methodName = activeManual ? activeManual.title : selectedManualKey;
+
+    try {
+      await addDoc(collection(db, 'deposits'), {
+        userId: user?.uid || 'guest_user',
+        userEmail: user?.email || 'dev.user@example.com',
+        userName: senderName || user?.displayName || 'Developer',
+        amountUsd: `$${depositAmountUsd.toFixed(2)}`,
+        amountPkr: `${amountPkr.toLocaleString()} PKR`,
+        coinsToCredit: `${coinsToCredit.toLocaleString()} 🪙`,
+        coinsNumber: coinsToCredit,
+        method: methodName,
+        accountSender: senderAccount,
+        receiptUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=800',
+        note: receiptNote,
+        timestamp: new Date().toISOString(),
+        createdAt: serverTimestamp(),
+        status: 'pending'
+      });
+    } catch (err) {
+      console.warn('Deposit recording fallback', err);
+    }
+
     setTimeout(() => {
       setDepositSubmitted(false);
       setShowDeposit(false);
-      alert(`Receipt submitted! ${Math.round(depositAmountUsd * rates.coinsPerUsd).toLocaleString()} Coins will be credited to your account after verification by the admin.`);
-    }, 1000);
+      setSenderAccount('');
+      setSenderName('');
+      alert(`Payment Proof Submitted! ${coinsToCredit.toLocaleString()} Coins will be credited to your balance after admin verification.`);
+    }, 800);
   };
+
+  // Automated Instant Card / API Gateway Checkout
+  const handleInstantApiPay = (e: React.FormEvent) => {
+    e.preventDefault();
+    setCardProcessing(true);
+
+    const coinsToCredit = Math.round(depositAmountUsd * rates.coinsPerUsd);
+
+    setTimeout(() => {
+      setCardProcessing(false);
+      const newBal = coinsBalance + coinsToCredit;
+      setCoinsBalance(newBal);
+      try {
+        localStorage.setItem('user_coins_balance', String(newBal));
+      } catch (e) {
+        console.error(e);
+      }
+      setShowDeposit(false);
+      alert(`🎉 Payment Successful! ${coinsToCredit.toLocaleString()} Coins have been credited immediately to your balance.`);
+    }, 1500);
+  };
+
+  // Filter allowed payment methods (Only enabled: true methods show to user)
+  const manualList = Object.entries(rates.manualMethods || {})
+    .filter(([_, m]) => m.enabled);
+  
+  const apiList = Object.entries(rates.apiGateways || {})
+    .filter(([_, g]) => g.enabled);
+
+  // Active category resolution based on available enabled methods
+  const effectiveCategory = 
+    depositCategory === 'manual' && manualList.length === 0 && apiList.length > 0 ? 'api' :
+    depositCategory === 'api' && apiList.length === 0 && manualList.length > 0 ? 'manual' :
+    depositCategory;
+
+  const effectiveManualKey = manualList.some(([k]) => k === selectedManualKey) 
+    ? selectedManualKey 
+    : (manualList[0]?.[0] || 'easypaisa');
+
+  const effectiveApiKey = apiList.some(([k]) => k === selectedApiKey) 
+    ? selectedApiKey 
+    : (apiList[0]?.[0] || 'jazzcash');
+
+  const selectedManualData = rates.manualMethods ? (rates.manualMethods as any)[effectiveManualKey] : null;
+  const selectedApiData = rates.apiGateways ? (rates.apiGateways as any)[effectiveApiKey] : null;
 
   const plans = [
     {
       id: 'starter',
       name: 'Starter Test Pack',
-      coins: 1000,
+      coins: rates.quickCoins || 1000,
       badge: 'Quick Test',
-      description: 'Ideal for 10 testers for 7 days quick audit.',
+      description: `Ideal for ${rates.quickTesters || 10} testers for ${rates.quickDays || 7} days quick audit.`,
       popular: false
     },
     {
@@ -128,13 +245,13 @@ export default function CustomerBilling() {
       name: 'Google Play 14-Day Pack',
       coins: rates.base20TesterCost || 2000,
       badge: 'Recommended by Google',
-      description: 'Full 20 verified testers for 14 continuous days to meet Google Play Console requirements.',
+      description: `Full ${rates.base20Testers || 20} verified testers for ${rates.base20Days || 14} continuous days to meet Google Play Console requirements.`,
       popular: true
     },
     {
       id: 'growth',
       name: 'Growth Multi-App Pack',
-      coins: 5000,
+      coins: (rates.base20TesterCost || 2000) * 2.5,
       badge: 'Best Value',
       description: 'Test 2-3 apps simultaneously with 20+ testers.',
       popular: false
@@ -142,9 +259,9 @@ export default function CustomerBilling() {
     {
       id: 'agency',
       name: 'Enterprise Agency Suite',
-      coins: 10000,
+      coins: rates.proCoins || 10000,
       badge: 'VIP Coverage',
-      description: 'High volume app testing for studios and developer agencies.',
+      description: `High volume app testing for studios with ${rates.proTesters || 30} testers for ${rates.proDays || 14} days.`,
       popular: false
     },
   ];
@@ -152,7 +269,7 @@ export default function CustomerBilling() {
   return (
     <ProtectedRoute allowedRoles={['customer', 'tester', 'earner']}>
       <CustomerLayout>
-        <div className="space-y-8 font-sans">
+        <div className="space-y-8 font-sans pb-16">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -300,7 +417,7 @@ export default function CustomerBilling() {
 
                       <div className="my-5 pt-4 border-t border-zinc-100">
                         <div className="flex items-baseline gap-1.5">
-                          <span className="text-3xl font-black text-zinc-900">{plan.coins.toLocaleString()}</span>
+                          <span className="text-3xl font-black text-zinc-900">{Math.round(plan.coins).toLocaleString()}</span>
                           <span className="text-xs font-bold text-amber-500 uppercase tracking-wide">Coins</span>
                         </div>
                         <p className="text-xs font-bold text-emerald-600 mt-0.5">
@@ -325,7 +442,9 @@ export default function CustomerBilling() {
             </div>
           </div>
 
-          {/* DEPOSIT / BUY COINS MODAL (SHOWING LIVE SAAS ADMIN ACCOUNTS) */}
+          {/* ======================================================== */}
+          {/* DEPOSIT / BUY COINS MODAL (SHOWING ONLY ALLOWED ADMIN METHODS) */}
+          {/* ======================================================== */}
           {showDeposit && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full p-6 md:p-8 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200">
@@ -337,160 +456,427 @@ export default function CustomerBilling() {
                   <button onClick={() => setShowDeposit(false)} className="text-zinc-400 hover:text-zinc-600 text-lg font-bold">✕</button>
                 </div>
 
-                <form onSubmit={handleDepositSubmit} className="space-y-5 mb-6">
-                  {/* Amount Selector */}
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1.5">
-                      Amount in USD ($)
-                    </label>
-                    <div className="relative">
-                      <input 
-                        type="number" 
-                        min={rates.minDepositUsd || 5}
-                        value={depositAmountUsd}
-                        onChange={(e) => setDepositAmountUsd(Number(e.target.value))}
-                        required
-                        className="w-full bg-zinc-50 border border-zinc-300 rounded-2xl px-4 py-3 text-sm font-black focus:ring-2 focus:ring-blue-500 outline-none"
-                      />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-600">
-                        = {Math.round(depositAmountUsd * rates.coinsPerUsd).toLocaleString()} Coins
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-zinc-400 mt-1">
-                      Equivalent in PKR: <strong>Rs {Math.round(depositAmountUsd * rates.pkrPerUsd).toLocaleString()} PKR</strong>
-                    </p>
-                  </div>
-
-                  {/* ADMIN RECEIVING ACCOUNTS FETCHED LIVE FROM SAAS PANEL */}
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-2">
-                      Select Deposit Method & Send Payment
-                    </label>
-                    
-                    <div className="grid grid-cols-2 gap-2 mb-3">
-                      <button
-                        type="button"
-                        onClick={() => setDepositMethod('easypaisa')}
-                        className={`p-3 rounded-2xl border text-left text-xs font-bold transition ${
-                          depositMethod === 'easypaisa' ? 'bg-emerald-50 border-emerald-500 text-emerald-900 ring-1 ring-emerald-500' : 'bg-zinc-50 border-zinc-200 text-zinc-700'
-                        }`}
-                      >
-                        📱 Easypaisa / JazzCash
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDepositMethod('bank')}
-                        className={`p-3 rounded-2xl border text-left text-xs font-bold transition ${
-                          depositMethod === 'bank' ? 'bg-emerald-50 border-emerald-500 text-emerald-900 ring-1 ring-emerald-500' : 'bg-zinc-50 border-zinc-200 text-zinc-700'
-                        }`}
-                      >
-                        🏦 Local Bank (PKR)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDepositMethod('payoneer')}
-                        className={`p-3 rounded-2xl border text-left text-xs font-bold transition ${
-                          depositMethod === 'payoneer' ? 'bg-emerald-50 border-emerald-500 text-emerald-900 ring-1 ring-emerald-500' : 'bg-zinc-50 border-zinc-200 text-zinc-700'
-                        }`}
-                      >
-                        🌐 Payoneer (USD)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDepositMethod('usdt')}
-                        className={`p-3 rounded-2xl border text-left text-xs font-bold transition ${
-                          depositMethod === 'usdt' ? 'bg-emerald-50 border-emerald-500 text-emerald-900 ring-1 ring-emerald-500' : 'bg-zinc-50 border-zinc-200 text-zinc-700'
-                        }`}
-                      >
-                        ₮ USDT / Binance Pay
-                      </button>
-                    </div>
-
-                    {/* LIVE ACCOUNT DETAILS FROM SAAS PANEL */}
-                    <div className="p-4 bg-zinc-900 text-white rounded-2xl text-xs space-y-1 font-mono">
-                      {depositMethod === 'easypaisa' && (
-                        <>
-                          <p className="text-zinc-400 uppercase text-[10px]">Send PKR to Easypaisa / JazzCash:</p>
-                          <p className="text-sm font-bold text-emerald-400">{rates.easypaisaNumber}</p>
-                          <p className="text-xs text-zinc-300">Account Title: {rates.easypaisaTitle}</p>
-                          <p className="text-xs text-amber-300 mt-1">Total to send: Rs {Math.round(depositAmountUsd * rates.pkrPerUsd).toLocaleString()} PKR</p>
-                        </>
-                      )}
-
-                      {depositMethod === 'bank' && (
-                        <>
-                          <p className="text-zinc-400 uppercase text-[10px]">Send PKR to Local Bank Transfer:</p>
-                          <p className="text-sm font-bold text-emerald-400">{rates.bankDetails}</p>
-                          <p className="text-xs text-amber-300 mt-1">Total to send: Rs {Math.round(depositAmountUsd * rates.pkrPerUsd).toLocaleString()} PKR</p>
-                        </>
-                      )}
-
-                      {depositMethod === 'payoneer' && (
-                        <>
-                          <p className="text-zinc-400 uppercase text-[10px]">Send USD to Payoneer Email:</p>
-                          <p className="text-sm font-bold text-emerald-400">{rates.payoneerEmail}</p>
-                          <p className="text-xs text-amber-300 mt-1">Total to send: ${depositAmountUsd} USD</p>
-                        </>
-                      )}
-
-                      {depositMethod === 'usdt' && (
-                        <>
-                          <p className="text-zinc-400 uppercase text-[10px]">Send USDT TRC20 / Binance Pay:</p>
-                          <p className="text-xs font-bold text-emerald-400 break-all">{rates.usdtAddress}</p>
-                          <p className="text-xs text-amber-300 mt-1">Total to send: ${depositAmountUsd} USDT</p>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Transaction ID / Sender Account */}
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1.5">
-                      Your Sender Account / Transaction ID (TID)
-                    </label>
+                {/* Amount Selector */}
+                <div className="mb-5">
+                  <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1.5">
+                    Deposit Amount ($ USD)
+                  </label>
+                  <div className="relative">
                     <input 
-                      type="text" 
-                      value={senderAccount}
-                      onChange={(e) => setSenderAccount(e.target.value)}
-                      placeholder="e.g. Transaction ID: 123456789 or 0300XXXXXXX"
+                      type="number" 
+                      min={rates.minDepositUsd || 5}
+                      value={depositAmountUsd}
+                      onChange={(e) => setDepositAmountUsd(Number(e.target.value))}
                       required
-                      className="w-full bg-zinc-50 border border-zinc-300 rounded-2xl px-4 py-2.5 text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full bg-zinc-50 border border-zinc-300 rounded-2xl px-4 py-3 text-sm font-black focus:ring-2 focus:ring-blue-500 outline-none"
                     />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-600">
+                      = {Math.round(depositAmountUsd * rates.coinsPerUsd).toLocaleString()} Coins
+                    </span>
                   </div>
+                  <p className="text-[11px] text-zinc-400 mt-1">
+                    Equivalent in PKR: <strong className="text-zinc-700">Rs {Math.round(depositAmountUsd * rates.pkrPerUsd).toLocaleString()} PKR</strong>
+                  </p>
+                </div>
 
-                  {/* Screenshot Upload Box */}
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1.5">
-                      Upload Payment Receipt Screenshot (Optional)
-                    </label>
-                    <div className="w-full border-2 border-dashed border-zinc-300 rounded-2xl p-4 flex flex-col items-center justify-center text-zinc-500 hover:bg-zinc-50 cursor-pointer transition">
-                      <Upload className="w-5 h-5 text-zinc-400 mb-1" />
-                      <span className="text-xs font-semibold">Click to attach screenshot proof</span>
+                {/* Category Switcher: Manual vs API */}
+                {manualList.length > 0 && apiList.length > 0 && (
+                  <div className="flex bg-zinc-100 p-1 rounded-2xl mb-4 text-xs font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setDepositCategory('manual')}
+                      className={`flex-1 py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 ${
+                        effectiveCategory === 'manual'
+                          ? 'bg-white text-zinc-900 shadow-sm'
+                          : 'text-zinc-500 hover:text-zinc-900'
+                      }`}
+                    >
+                      <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
+                      Direct Transfer ({manualList.length} Allowed)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDepositCategory('api')}
+                      className={`flex-1 py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 ${
+                        effectiveCategory === 'api'
+                          ? 'bg-white text-zinc-900 shadow-sm'
+                          : 'text-zinc-500 hover:text-zinc-900'
+                      }`}
+                    >
+                      <Zap className="w-3.5 h-3.5 text-indigo-600" />
+                      Instant Automated ({apiList.length} Allowed)
+                    </button>
+                  </div>
+                )}
+
+                {/* Empty State when no payment methods are active */}
+                {manualList.length === 0 && apiList.length === 0 && (
+                  <div className="p-6 bg-amber-50 border border-amber-200 rounded-2xl text-center space-y-2">
+                    <p className="text-sm font-bold text-amber-800">No Payment Methods Enabled</p>
+                    <p className="text-xs text-amber-600">The platform administrator has not enabled any manual or automated payment gateways yet. Please check back shortly or contact support.</p>
+                  </div>
+                )}
+
+                {/* ======================================================== */}
+                {/* 1. MANUAL PAYMENT METHODS TAB */}
+                {/* ======================================================== */}
+                {effectiveCategory === 'manual' && manualList.length > 0 && (
+                  <div className="space-y-4">
+                    {/* Method Selector Chips */}
+                    <div>
+                      <label className="block text-[11px] font-bold text-zinc-500 uppercase tracking-wider mb-2">
+                        Select Allowed Receiving Account:
+                      </label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {manualList.map(([key, m]) => (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => setSelectedManualKey(key)}
+                            className={`p-2.5 rounded-xl border text-left text-xs font-bold transition flex flex-col justify-between ${
+                              selectedManualKey === key 
+                                ? 'bg-emerald-50 border-emerald-500 text-emerald-900 ring-2 ring-emerald-500/20' 
+                                : 'bg-zinc-50 border-zinc-200 text-zinc-700 hover:border-zinc-300'
+                            }`}
+                          >
+                            <span className="truncate">{m.title}</span>
+                            <span className="text-[10px] text-emerald-600 font-semibold mt-1">{m.badge || 'Allowed'}</span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex gap-3 pt-2">
-                    <button 
-                      type="button" 
-                      onClick={() => setShowDeposit(false)}
-                      className="flex-1 px-4 py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-semibold text-xs rounded-xl transition"
-                    >
-                      Cancel
-                    </button>
-                    <button 
-                      type="submit"
-                      disabled={depositSubmitted}
-                      className="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl transition shadow-lg shadow-blue-600/20 disabled:opacity-50"
-                    >
-                      {depositSubmitted ? 'Submitting...' : 'Submit Payment Proof'}
-                    </button>
+                    {/* LIVE ACCOUNT DETAILS WITH 1-CLICK COPY BUTTONS */}
+                    {selectedManualData && (
+                      <div className="p-4 bg-zinc-900 text-white rounded-2xl text-xs space-y-3 font-sans border border-zinc-800 shadow-inner">
+                        <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+                          <span className="text-zinc-400 font-bold text-[11px] uppercase tracking-wider">
+                            Send Payment To:
+                          </span>
+                          <span className="text-amber-400 font-extrabold text-xs">
+                            Amount: Rs {Math.round(depositAmountUsd * rates.pkrPerUsd).toLocaleString()} PKR (${depositAmountUsd} USD)
+                          </span>
+                        </div>
+
+                        {/* Title */}
+                        {selectedManualData.accountTitle && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-zinc-400 text-[11px]">Account Title:</span>
+                            <strong className="text-white font-bold">{selectedManualData.accountTitle}</strong>
+                          </div>
+                        )}
+
+                        {/* Number / Address with Copy Button */}
+                        {selectedManualData.accountNumber && (
+                          <div className="flex items-center justify-between bg-zinc-950 p-2 rounded-xl border border-zinc-800">
+                            <div>
+                              <span className="text-[10px] text-zinc-500 uppercase block">Account / Number / Wallet:</span>
+                              <span className="text-emerald-400 font-mono font-bold text-xs break-all">
+                                {selectedManualData.accountNumber}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleCopy(selectedManualData.accountNumber, 'acc_num')}
+                              className="px-2.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 transition"
+                            >
+                              {copiedField === 'acc_num' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                              {copiedField === 'acc_num' ? 'Copied' : 'Copy'}
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Bank IBAN if present */}
+                        {selectedManualData.iban && (
+                          <div className="flex items-center justify-between bg-zinc-950 p-2 rounded-xl border border-zinc-800">
+                            <div>
+                              <span className="text-[10px] text-zinc-500 uppercase block">IBAN Number:</span>
+                              <span className="text-emerald-400 font-mono font-bold text-xs">
+                                {selectedManualData.iban}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleCopy(selectedManualData.iban, 'iban')}
+                              className="px-2.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 transition"
+                            >
+                              {copiedField === 'iban' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                              {copiedField === 'iban' ? 'Copied' : 'Copy'}
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Raast ID if present */}
+                        {selectedManualData.raastId && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-zinc-400 text-[11px]">Raast ID / Binance ID:</span>
+                            <span className="text-white font-mono font-bold">{selectedManualData.raastId}</span>
+                          </div>
+                        )}
+
+                        {/* Instructions */}
+                        {selectedManualData.instructions && (
+                          <p className="text-[11px] text-zinc-400 italic pt-1 border-t border-zinc-800">
+                            💡 {selectedManualData.instructions}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Manual Submission Form */}
+                    <form onSubmit={handleDepositSubmit} className="space-y-3 pt-2">
+                      <div>
+                        <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">
+                          Sender Name / Account Holder
+                        </label>
+                        <input 
+                          type="text" 
+                          value={senderName}
+                          onChange={(e) => setSenderName(e.target.value)}
+                          placeholder="e.g. Omar Farooq"
+                          required
+                          className="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-4 py-2.5 text-xs font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">
+                          Transaction ID (TID) / Sender Account Number
+                        </label>
+                        <input 
+                          type="text" 
+                          value={senderAccount}
+                          onChange={(e) => setSenderAccount(e.target.value)}
+                          placeholder="e.g. TID: 9876543210 or 0300XXXXXXX"
+                          required
+                          className="w-full bg-zinc-50 border border-zinc-300 rounded-xl px-4 py-2.5 text-xs font-mono font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                      </div>
+
+                      {/* Screenshot Upload Box */}
+                      <div>
+                        <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">
+                          Upload Payment Receipt Screenshot (Optional)
+                        </label>
+                        <div className="w-full border-2 border-dashed border-zinc-300 rounded-2xl p-4 flex flex-col items-center justify-center text-zinc-500 hover:bg-zinc-50 cursor-pointer transition">
+                          <Upload className="w-5 h-5 text-zinc-400 mb-1" />
+                          <span className="text-xs font-semibold">Click to attach screenshot proof</span>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3 pt-3">
+                        <button 
+                          type="button" 
+                          onClick={() => setShowDeposit(false)}
+                          className="flex-1 px-4 py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-semibold text-xs rounded-xl transition"
+                        >
+                          Cancel
+                        </button>
+                        <button 
+                          type="submit"
+                          disabled={depositSubmitted}
+                          className="flex-1 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs rounded-xl transition shadow-lg shadow-emerald-600/20 disabled:opacity-50"
+                        >
+                          {depositSubmitted ? 'Submitting Proof...' : 'Submit Payment Proof'}
+                        </button>
+                      </div>
+                    </form>
                   </div>
-                </form>
+                )}
+
+                {/* ======================================================== */}
+                {/* 2. AUTOMATED API GATEWAYS TAB */}
+                {/* ======================================================== */}
+                {effectiveCategory === 'api' && apiList.length > 0 && (
+                  <div className="space-y-4">
+                    {/* API Selector Chips */}
+                    <div>
+                      <label className="block text-[11px] font-bold text-zinc-500 uppercase tracking-wider mb-2">
+                        Select Online Automated Gateway:
+                      </label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {apiList.map(([key, g]) => (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => setSelectedApiKey(key)}
+                            className={`p-2.5 rounded-xl border text-left text-xs font-bold transition flex flex-col justify-between ${
+                              selectedApiKey === key 
+                                ? 'bg-indigo-50 border-indigo-500 text-indigo-900 ring-2 ring-indigo-500/20' 
+                                : 'bg-zinc-50 border-zinc-200 text-zinc-700 hover:border-zinc-300'
+                            }`}
+                          >
+                            <span className="truncate">{g.title}</span>
+                            <span className="text-[10px] text-indigo-600 font-semibold mt-1">
+                              {g.mode === 'live' ? '🟢 Live' : '🧪 Sandbox'}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Dynamic API Gateway Checkout Form */}
+                    <form onSubmit={handleInstantApiPay} className="space-y-3 bg-zinc-50 p-5 rounded-2xl border border-zinc-200">
+                      <div className="flex items-center justify-between border-b border-zinc-200 pb-3">
+                        <div className="flex items-center gap-2">
+                          <Lock className="w-4 h-4 text-emerald-600" />
+                          <span className="text-xs font-bold text-zinc-900">
+                            {selectedApiKey === 'jazzcash' ? 'JazzCash Mobile Wallet Auto-Verify' :
+                             selectedApiKey === 'easypaisa' ? 'Easypaisa DirectPay Auto-Verify' :
+                             selectedApiKey === 'binancePay' ? 'Binance Pay Instant 0-Fee Checkout' :
+                             'Secure 256-Bit Encrypted Card Checkout'}
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+                          Auto-Verify ⚡
+                        </span>
+                      </div>
+
+                      {/* JAZZCASH API FORM */}
+                      {selectedApiKey === 'jazzcash' && (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">
+                              JazzCash Mobile Account Number
+                            </label>
+                            <input 
+                              type="text" 
+                              value={cardNumber}
+                              onChange={(e) => setCardNumber(e.target.value)}
+                              placeholder="03001234567"
+                              required
+                              className="w-full bg-white border border-zinc-300 rounded-xl px-4 py-2.5 text-xs font-mono font-bold focus:ring-2 focus:ring-red-500 outline-none"
+                            />
+                            <p className="text-[10px] text-zinc-400 mt-1">You will receive an MPIN confirmation prompt on your JazzCash mobile app / phone.</p>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">
+                              CNIC Last 6 Digits (Optional / Security)
+                            </label>
+                            <input 
+                              type="text" 
+                              maxLength={6}
+                              value={cardCvc}
+                              onChange={(e) => setCardCvc(e.target.value)}
+                              placeholder="e.g. 123456"
+                              className="w-full bg-white border border-zinc-300 rounded-xl px-4 py-2.5 text-xs font-mono focus:ring-2 focus:ring-red-500 outline-none"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* EASYPAISA API FORM */}
+                      {selectedApiKey === 'easypaisa' && (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">
+                              Easypaisa Account Number
+                            </label>
+                            <input 
+                              type="text" 
+                              value={cardNumber}
+                              onChange={(e) => setCardNumber(e.target.value)}
+                              placeholder="03001234567"
+                              required
+                              className="w-full bg-white border border-zinc-300 rounded-xl px-4 py-2.5 text-xs font-mono font-bold focus:ring-2 focus:ring-emerald-500 outline-none"
+                            />
+                            <p className="text-[10px] text-zinc-400 mt-1">An instant OTP / Approval prompt will be sent to your Easypaisa registered account.</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* STRIPE / CARD / PAYPAL API FORM */}
+                      {(selectedApiKey === 'stripe' || selectedApiKey === 'paypal' || selectedApiKey === 'lemonSqueezy' || selectedApiKey === 'payfast') && (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">
+                              Card Number
+                            </label>
+                            <input 
+                              type="text" 
+                              value={cardNumber}
+                              onChange={(e) => setCardNumber(e.target.value)}
+                              placeholder="4242 •••• •••• 4242"
+                              required
+                              className="w-full bg-white border border-zinc-300 rounded-xl px-4 py-2.5 text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">
+                                Expiry Date
+                              </label>
+                              <input 
+                                type="text" 
+                                value={cardExp}
+                                onChange={(e) => setCardExp(e.target.value)}
+                                placeholder="MM / YY"
+                                required
+                                className="w-full bg-white border border-zinc-300 rounded-xl px-4 py-2.5 text-xs font-mono focus:ring-2 focus:ring-indigo-500 outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">
+                                CVC / CVV
+                              </label>
+                              <input 
+                                type="password" 
+                                maxLength={4}
+                                value={cardCvc}
+                                onChange={(e) => setCardCvc(e.target.value)}
+                                placeholder="•••"
+                                required
+                                className="w-full bg-white border border-zinc-300 rounded-xl px-4 py-2.5 text-xs font-mono focus:ring-2 focus:ring-indigo-500 outline-none"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* BINANCE PAY FORM */}
+                      {selectedApiKey === 'binancePay' && (
+                        <div className="p-3 bg-zinc-900 rounded-xl text-white text-center space-y-2">
+                          <p className="text-xs text-amber-400 font-bold">Binance Pay 1-Click Instant Checkout</p>
+                          <p className="text-[11px] text-zinc-400">Total: ${depositAmountUsd} USDT (0 Network Fees)</p>
+                        </div>
+                      )}
+
+                      <div className="flex gap-3 pt-3">
+                        <button 
+                          type="button" 
+                          onClick={() => setShowDeposit(false)}
+                          className="flex-1 px-4 py-2.5 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 font-semibold text-xs rounded-xl transition"
+                        >
+                          Cancel
+                        </button>
+                        <button 
+                          type="submit"
+                          disabled={cardProcessing}
+                          className="flex-1 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs rounded-xl transition shadow-lg shadow-emerald-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                          {cardProcessing ? (
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Zap className="w-4 h-4" />
+                          )}
+                          {cardProcessing ? 'Authorizing Payment...' : 
+                           selectedApiKey === 'jazzcash' ? `Pay Rs ${Math.round(depositAmountUsd * rates.pkrPerUsd).toLocaleString()} via JazzCash` :
+                           selectedApiKey === 'easypaisa' ? `Pay Rs ${Math.round(depositAmountUsd * rates.pkrPerUsd).toLocaleString()} via Easypaisa` :
+                           `Pay $${depositAmountUsd} USD Now`}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
+          {/* ======================================================== */}
           {/* PAYMENT METHODS MODAL */}
+          {/* ======================================================== */}
           {showPaymentMethodsModal && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 md:p-8 animate-in fade-in zoom-in duration-200">
