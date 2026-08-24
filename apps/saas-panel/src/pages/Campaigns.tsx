@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Rocket, ShieldCheck, Users, AlertCircle, Smartphone } from 'lucide-react';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { Rocket, ShieldCheck, Users, AlertCircle, Smartphone, Trash2 } from 'lucide-react';
+import { collection, onSnapshot, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 interface CampaignItem {
@@ -21,6 +21,16 @@ interface CampaignItem {
 export default function Campaigns() {
   const [campaigns, setCampaigns] = useState<CampaignItem[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const handleDeleteCampaign = async (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to permanently delete campaign "${name}"?`)) return;
+    try {
+      await deleteDoc(doc(db, 'campaigns', id));
+    } catch (err) {
+      console.error('Failed to delete campaign:', err);
+      alert('Could not delete campaign.');
+    }
+  };
 
   useEffect(() => {
     try {
@@ -156,6 +166,7 @@ export default function Campaigns() {
                   <th className="p-4 min-w-[170px]">14-Day Progress</th>
                   <th className="p-4 min-w-[110px]">Budget</th>
                   <th className="p-4 min-w-[120px]">Status</th>
+                  <th className="p-4 min-w-[80px] text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/80">
@@ -213,6 +224,15 @@ export default function Campaigns() {
                       <span className="px-2.5 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/30">
                         {camp.playStoreStatus}
                       </span>
+                    </td>
+                    <td className="p-4 text-right whitespace-nowrap">
+                      <button
+                        onClick={() => handleDeleteCampaign(camp.id, camp.appName)}
+                        className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition cursor-pointer"
+                        title="Delete Campaign"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
                 ))}
