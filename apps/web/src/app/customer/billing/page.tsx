@@ -63,6 +63,8 @@ export default function CustomerBilling() {
   const [senderAccount, setSenderAccount] = useState('');
   const [senderName, setSenderName] = useState('');
   const [receiptNote, setReceiptNote] = useState('');
+  const [receiptScreenshot, setReceiptScreenshot] = useState<string | null>(null);
+  const [isCompressingImage, setIsCompressingImage] = useState(false);
   const [depositSubmitted, setDepositSubmitted] = useState(false);
 
   // Online Card Simulation State
@@ -144,6 +146,49 @@ export default function CustomerBilling() {
     setPaymentMethods(paymentMethods.filter(pm => pm.id !== id));
   };
 
+  const handleReceiptUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsCompressingImage(true);
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxDim = 800;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height && width > maxDim) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else if (height > maxDim) {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.72);
+          setReceiptScreenshot(compressedBase64);
+        } else {
+          setReceiptScreenshot(event.target?.result as string);
+        }
+        setIsCompressingImage(false);
+      };
+      img.onerror = () => {
+        setReceiptScreenshot(event.target?.result as string);
+        setIsCompressingImage(false);
+      };
+    };
+  };
+
   // Submit manual payment receipt
   const handleDepositSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,7 +212,7 @@ export default function CustomerBilling() {
         coinsNumber: coinsToCredit,
         method: methodName,
         accountSender: senderAccount,
-        receiptUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=800',
+        receiptUrl: receiptScreenshot || '',
         note: receiptNote,
         timestamp: new Date().toISOString(),
         createdAt: serverTimestamp(),
@@ -182,6 +227,7 @@ export default function CustomerBilling() {
       setShowDeposit(false);
       setSenderAccount('');
       setSenderName('');
+      setReceiptScreenshot(null);
       alert(`Payment Proof Submitted! ${coinsToCredit.toLocaleString()} Coins will be credited to your balance after admin verification.`);
     }, 800);
   };
@@ -655,13 +701,47 @@ export default function CustomerBilling() {
 
                       {/* Screenshot Upload Box */}
                       <div>
-                        <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1">
-                          Upload Payment Receipt Screenshot (Optional)
+                        <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1 flex items-center justify-between">
+                          <span>Upload Payment Receipt Screenshot</span>
+                          <span className="text-[10px] text-zinc-400 font-normal">Auto-optimized WebP</span>
                         </label>
-                        <div className="w-full border-2 border-dashed border-zinc-300 rounded-2xl p-4 flex flex-col items-center justify-center text-zinc-500 hover:bg-zinc-50 cursor-pointer transition">
-                          <Upload className="w-5 h-5 text-zinc-400 mb-1" />
-                          <span className="text-xs font-semibold">Click to attach screenshot proof</span>
-                        </div>
+                        
+                        {receiptScreenshot ? (
+                          <div className="relative rounded-2xl border border-zinc-200 overflow-hidden bg-zinc-950 p-2 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <img 
+                                src={receiptScreenshot} 
+                                alt="Receipt Preview" 
+                                className="w-14 h-14 object-cover rounded-xl border border-zinc-800" 
+                              />
+                              <div>
+                                <p className="text-xs font-bold text-white">Receipt Attached ✓</p>
+                                <p className="text-[10px] text-emerald-400 font-medium">Ready for verification</p>
+                              </div>
+                            </div>
+                            <button 
+                              type="button" 
+                              onClick={() => setReceiptScreenshot(null)}
+                              className="px-3 py-1.5 bg-red-600/20 hover:bg-red-600/40 text-red-400 text-xs font-bold rounded-xl transition cursor-pointer border border-red-500/30"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="w-full border-2 border-dashed border-zinc-300 hover:border-emerald-500 rounded-2xl p-4 flex flex-col items-center justify-center text-zinc-500 hover:bg-emerald-50/20 cursor-pointer transition">
+                            <Upload className="w-5 h-5 text-emerald-600 mb-1" />
+                            <span className="text-xs font-bold text-zinc-800">
+                              {isCompressingImage ? 'Processing Image...' : 'Click to attach screenshot proof'}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 mt-0.5">JPG, PNG receipt slip / screenshot</span>
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              onChange={handleReceiptUpload}
+                              className="hidden" 
+                            />
+                          </label>
+                        )}
                       </div>
 
                       <div className="flex gap-3 pt-3">
