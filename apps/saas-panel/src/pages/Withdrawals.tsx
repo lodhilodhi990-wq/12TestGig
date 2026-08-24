@@ -8,7 +8,7 @@ import {
   Coins, 
   ShieldCheck
 } from 'lucide-react';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 interface Withdrawal {
@@ -115,13 +115,28 @@ export default function Withdrawals() {
         rejectionReason: rejectReason,
         rejectedAt: new Date().toISOString()
       });
+
+      // Automatically Refund Coins to User
+      if (w.userId) {
+        const userRef = doc(db, 'users', w.userId);
+        const snap = await getDoc(userRef);
+        if (snap.exists()) {
+          const curBal = Number(snap.data()?.coinsBalance || snap.data()?.coins || 0);
+          const refundedBal = curBal + Number(w.amountCoins || 0);
+          await updateDoc(userRef, {
+            coinsBalance: refundedBal,
+            coins: refundedBal,
+            updatedAt: new Date().toISOString()
+          });
+        }
+      }
     } catch (e) {
       console.warn('Firestore update note', e);
     } finally {
       setActionLoading(false);
       setSelectedTx(null);
       setRejectReason('');
-      alert(`Withdrawal request rejected and coins refunded to tester's balance.`);
+      alert(`Withdrawal request rejected and ${w.amountCoins.toLocaleString()} coins automatically refunded to tester.`);
     }
   };
 

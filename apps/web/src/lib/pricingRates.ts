@@ -57,6 +57,26 @@ export interface ApiPaymentGateways {
   payfast: ApiGatewayDetail;
 }
 
+export interface WithdrawalMethodDetail {
+  enabled: boolean;
+  title: string;
+  minCoins: number;
+  maxCoins: number;
+  processingTime: string; // e.g. "1 to 24 Hours", "Instant (15-30 Mins)"
+  feePercent: number; // e.g. 0% or 2%
+  instructions: string;
+  badge?: string;
+}
+
+export interface WithdrawalMethodsConfig {
+  jazzcash: WithdrawalMethodDetail;
+  easypaisa: WithdrawalMethodDetail;
+  bankTransfer: WithdrawalMethodDetail;
+  usdtCrypto: WithdrawalMethodDetail;
+  payoneer: WithdrawalMethodDetail;
+  sadapay: WithdrawalMethodDetail;
+}
+
 export interface PricingRates {
   coinsPerUsd: number;
   pkrPerUsd: number;
@@ -64,6 +84,10 @@ export interface PricingRates {
   oneCoinPkr: number;
   minDepositUsd: number;
   minWithdrawCoins: number;
+  maxWithdrawCoins: number;
+  withdrawalProcessingTime: string;
+  withdrawalFeePercent: number;
+  withdrawalDailyLimitCoins: number;
   // Package 1: Google Play Req
   base20TesterCost: number;
   base20Testers: number;
@@ -78,7 +102,7 @@ export interface PricingRates {
   proTesters: number;
   proDays: number;
   proEnabled: boolean;
-  // Splits & Accounts (Legacy flat fields for backward compatibility)
+  // Splits & Accounts
   dailyTesterPayout: number;
   completionBonus: number;
   platformFeePercent: number;
@@ -91,6 +115,7 @@ export interface PricingRates {
   // Advance Payment Gateways & Manual Accounts Setup
   manualMethods?: ManualPaymentMethods;
   apiGateways?: ApiPaymentGateways;
+  withdrawalMethods?: WithdrawalMethodsConfig;
 }
 
 export const DEFAULT_MANUAL_METHODS: ManualPaymentMethods = {
@@ -228,13 +253,80 @@ export const DEFAULT_API_GATEWAYS: ApiPaymentGateways = {
   }
 };
 
+export const DEFAULT_WITHDRAWAL_METHODS: WithdrawalMethodsConfig = {
+  jazzcash: {
+    enabled: true,
+    title: 'JazzCash (Pakistan)',
+    minCoins: 500,
+    maxCoins: 50000,
+    processingTime: '1 to 24 Hours',
+    feePercent: 0,
+    instructions: 'Provide active JazzCash 11-digit mobile number and registered account title.',
+    badge: 'Fast Mobile Payout'
+  },
+  easypaisa: {
+    enabled: true,
+    title: 'Easypaisa (Pakistan)',
+    minCoins: 500,
+    maxCoins: 50000,
+    processingTime: '1 to 24 Hours',
+    feePercent: 0,
+    instructions: 'Provide active Easypaisa mobile number and registered CNIC account title.',
+    badge: 'Instant Mobile Payout'
+  },
+  bankTransfer: {
+    enabled: true,
+    title: 'Pakistan Local Bank & Raast (IBAN)',
+    minCoins: 1000,
+    maxCoins: 100000,
+    processingTime: '2 to 24 Hours',
+    feePercent: 0,
+    instructions: 'Provide Bank Name, 24-digit IBAN (or Raast ID), and Exact Account Title.',
+    badge: 'Direct Raast / IBAN'
+  },
+  usdtCrypto: {
+    enabled: true,
+    title: 'USDT (TRC-20) / Binance Pay',
+    minCoins: 1000,
+    maxCoins: 200000,
+    processingTime: '1 to 12 Hours',
+    feePercent: 1,
+    instructions: 'Provide TRC-20 Wallet Address or Binance Pay ID. Fast worldwide crypto payout.',
+    badge: 'Global Crypto'
+  },
+  payoneer: {
+    enabled: true,
+    title: 'Payoneer (USD Payout)',
+    minCoins: 2000,
+    maxCoins: 100000,
+    processingTime: '12 to 24 Hours',
+    feePercent: 0,
+    instructions: 'Provide registered Payoneer email address for direct in-network USD payment.',
+    badge: 'Direct USD'
+  },
+  sadapay: {
+    enabled: true,
+    title: 'SadaPay / NayaPay',
+    minCoins: 500,
+    maxCoins: 50000,
+    processingTime: '1 to 24 Hours',
+    feePercent: 0,
+    instructions: 'Provide your SadaPay or NayaPay registered mobile number and title.',
+    badge: 'Fintech Payout'
+  }
+};
+
 export const DEFAULT_PRICING_RATES: PricingRates = {
   coinsPerUsd: 100,
   pkrPerUsd: 280,
   oneCoinUsd: 0.01,
   oneCoinPkr: 2.80,
   minDepositUsd: 5,
-  minWithdrawCoins: 1000,
+  minWithdrawCoins: 500,
+  maxWithdrawCoins: 50000,
+  withdrawalProcessingTime: '1 to 24 Hours',
+  withdrawalFeePercent: 0,
+  withdrawalDailyLimitCoins: 100000,
   base20TesterCost: 200,
   base20Testers: 20,
   base20Days: 14,
@@ -256,43 +348,20 @@ export const DEFAULT_PRICING_RATES: PricingRates = {
   usdtAddress: 'USDT TRC20: T9yD14Nj9yDbv... (Binance Pay)',
   manualMethods: DEFAULT_MANUAL_METHODS,
   apiGateways: DEFAULT_API_GATEWAYS,
+  withdrawalMethods: DEFAULT_WITHDRAWAL_METHODS,
 };
 
 function normalizePricingRates(data: any): PricingRates {
   const manual = { ...DEFAULT_MANUAL_METHODS, ...(data?.manualMethods || {}) };
-  if (data?.easypaisaNumber && !data?.manualMethods?.easypaisa?.accountNumber) {
-    manual.easypaisa = {
-      ...manual.easypaisa,
-      accountNumber: data.easypaisaNumber,
-      accountTitle: data.easypaisaTitle || manual.easypaisa.accountTitle,
-    };
-  }
-  if (data?.bankDetails && !data?.manualMethods?.bankTransfer?.accountNumber) {
-    manual.bankTransfer = {
-      ...manual.bankTransfer,
-      instructions: data.bankDetails,
-    };
-  }
-  if (data?.payoneerEmail && !data?.manualMethods?.payoneer?.accountNumber) {
-    manual.payoneer = {
-      ...manual.payoneer,
-      accountNumber: data.payoneerEmail,
-    };
-  }
-  if (data?.usdtAddress && !data?.manualMethods?.usdtCrypto?.accountNumber) {
-    manual.usdtCrypto = {
-      ...manual.usdtCrypto,
-      accountNumber: data.usdtAddress,
-    };
-  }
-
   const api = { ...DEFAULT_API_GATEWAYS, ...(data?.apiGateways || {}) };
+  const withdraw = { ...DEFAULT_WITHDRAWAL_METHODS, ...(data?.withdrawalMethods || {}) };
 
   return {
     ...DEFAULT_PRICING_RATES,
     ...data,
     manualMethods: manual,
     apiGateways: api,
+    withdrawalMethods: withdraw,
   };
 }
 
