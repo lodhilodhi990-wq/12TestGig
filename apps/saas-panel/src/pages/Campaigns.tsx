@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Rocket, ShieldCheck, Users, AlertCircle } from 'lucide-react';
+import { Rocket, ShieldCheck, Users, AlertCircle, Smartphone } from 'lucide-react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
@@ -12,7 +12,7 @@ interface CampaignItem {
   activeTesters: number;
   daysPassed: number;
   totalDays: number;
-  budgetCoins: string;
+  budgetCoins: number;
   playStoreStatus: string;
   icon?: string;
   createdAt?: string;
@@ -28,18 +28,21 @@ export default function Campaigns() {
       const unsub = onSnapshot(q, (snap) => {
         const list: CampaignItem[] = snap.docs.map(doc => {
           const data = doc.data();
+          const rawCoins = Number(data.costCoins || data.budgetCoins || data.coins || data.rewardCoins || 2000);
+          const iconVal = data.icon || data.appIcon || data.logo || '';
+
           return {
             id: doc.id,
-            appName: data.appName || data.name || 'Android Application',
+            appName: data.appName || data.name || data.title || 'Android Application',
             packageId: data.packageId || data.appId || 'com.example.app',
-            developerEmail: data.developerEmail || data.userEmail || 'developer@example.com',
-            targetTesters: data.targetTesters || data.testersNeeded || 20,
-            activeTesters: data.activeTesters || data.testersJoined || 0,
-            daysPassed: data.daysPassed || 0,
-            totalDays: data.totalDays || 14,
-            budgetCoins: data.budgetCoins ? `${data.budgetCoins} 🪙` : `${data.costCoins || 2000} 🪙`,
+            developerEmail: data.developerEmail || data.userEmail || data.creatorEmail || 'developer@example.com',
+            targetTesters: Number(data.targetTesters || data.testersNeeded || data.requiredTesters || 20),
+            activeTesters: Number(data.activeTesters || data.testersJoined || data.joinedCount || 0),
+            daysPassed: Number(data.daysPassed || 0),
+            totalDays: Number(data.totalDays || data.durationDays || 14),
+            budgetCoins: rawCoins,
             playStoreStatus: data.playStoreStatus || data.status || 'Active Testing',
-            icon: data.icon || '📱',
+            icon: iconVal,
           };
         });
         setCampaigns(list);
@@ -49,18 +52,21 @@ export default function Campaigns() {
         const unsubFallback = onSnapshot(collection(db, 'campaigns'), (snap) => {
           const fallbackList: CampaignItem[] = snap.docs.map(doc => {
             const data = doc.data();
+            const rawCoins = Number(data.costCoins || data.budgetCoins || data.coins || data.rewardCoins || 2000);
+            const iconVal = data.icon || data.appIcon || data.logo || '';
+
             return {
               id: doc.id,
-              appName: data.appName || data.name || 'Android Application',
+              appName: data.appName || data.name || data.title || 'Android Application',
               packageId: data.packageId || data.appId || 'com.example.app',
-              developerEmail: data.developerEmail || data.userEmail || 'developer@example.com',
-              targetTesters: data.targetTesters || data.testersNeeded || 20,
-              activeTesters: data.activeTesters || data.testersJoined || 0,
-              daysPassed: data.daysPassed || 0,
-              totalDays: data.totalDays || 14,
-              budgetCoins: data.budgetCoins ? `${data.budgetCoins} 🪙` : `${data.costCoins || 2000} 🪙`,
+              developerEmail: data.developerEmail || data.userEmail || data.creatorEmail || 'developer@example.com',
+              targetTesters: Number(data.targetTesters || data.testersNeeded || data.requiredTesters || 20),
+              activeTesters: Number(data.activeTesters || data.testersJoined || data.joinedCount || 0),
+              daysPassed: Number(data.daysPassed || 0),
+              totalDays: Number(data.totalDays || data.durationDays || 14),
+              budgetCoins: rawCoins,
               playStoreStatus: data.playStoreStatus || data.status || 'Active Testing',
-              icon: data.icon || '📱',
+              icon: iconVal,
             };
           });
           setCampaigns(fallbackList);
@@ -141,15 +147,15 @@ export default function Campaigns() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left text-xs border-collapse">
               <thead className="bg-slate-900/60 border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
                 <tr>
-                  <th className="p-4">App & Package ID</th>
-                  <th className="p-4">Developer</th>
-                  <th className="p-4">Tester Capacity</th>
-                  <th className="p-4">14-Day Progress</th>
-                  <th className="p-4">Budget</th>
-                  <th className="p-4">Status</th>
+                  <th className="p-4 min-w-[240px]">App & Package ID</th>
+                  <th className="p-4 min-w-[200px]">Developer</th>
+                  <th className="p-4 min-w-[130px]">Tester Capacity</th>
+                  <th className="p-4 min-w-[170px]">14-Day Progress</th>
+                  <th className="p-4 min-w-[110px]">Budget</th>
+                  <th className="p-4 min-w-[120px]">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/80">
@@ -157,32 +163,40 @@ export default function Campaigns() {
                   <tr key={camp.id} className="hover:bg-slate-800/20 transition">
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-xl shadow">
-                          {camp.icon}
+                        <div className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden shrink-0 shadow">
+                          {camp.icon && (camp.icon.startsWith('http') || camp.icon.startsWith('data:image')) ? (
+                            <img src={camp.icon} alt="" className="w-full h-full object-cover" />
+                          ) : camp.icon && camp.icon.length <= 4 ? (
+                            <span className="text-lg">{camp.icon}</span>
+                          ) : (
+                            <Smartphone className="w-5 h-5 text-indigo-400" />
+                          )}
                         </div>
-                        <div>
-                          <p className="font-bold text-white">{camp.appName}</p>
-                          <p className="text-[10px] text-slate-400 font-mono">{camp.packageId}</p>
+                        <div className="min-w-0 max-w-[200px]">
+                          <p className="font-bold text-white truncate text-xs">{camp.appName}</p>
+                          <p className="text-[10px] text-slate-400 font-mono truncate">{camp.packageId}</p>
                         </div>
                       </div>
                     </td>
                     <td className="p-4">
-                      <p className="text-slate-300 font-medium">{camp.developerEmail}</p>
-                      <p className="text-[10px] text-slate-500 font-mono">{camp.id}</p>
+                      <div className="min-w-0 max-w-[200px]">
+                        <p className="text-slate-300 font-medium truncate text-xs">{camp.developerEmail}</p>
+                        <p className="text-[10px] text-slate-500 font-mono truncate">ID: {camp.id}</p>
+                      </div>
                     </td>
-                    <td className="p-4">
+                    <td className="p-4 whitespace-nowrap">
                       <div className="flex items-center gap-1.5 font-bold text-white">
-                        <Users className="w-3.5 h-3.5 text-blue-400" />
+                        <Users className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                         <span>{camp.activeTesters} / {camp.targetTesters}</span>
                       </div>
                     </td>
                     <td className="p-4">
                       <div>
                         <div className="flex justify-between text-[11px] mb-1">
-                          <span className="text-slate-300 font-medium">Day {camp.daysPassed} of {camp.totalDays}</span>
-                          <span className="text-slate-400">{Math.max(0, camp.totalDays - camp.daysPassed)} days left</span>
+                          <span className="text-slate-300 font-medium whitespace-nowrap">Day {camp.daysPassed} of {camp.totalDays}</span>
+                          <span className="text-slate-400 whitespace-nowrap">{Math.max(0, camp.totalDays - camp.daysPassed)} left</span>
                         </div>
-                        <div className="w-32 bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                        <div className="w-28 bg-slate-800 rounded-full h-1.5 overflow-hidden">
                           <div 
                             className="bg-indigo-500 h-1.5 rounded-full" 
                             style={{ width: `${Math.min(100, (camp.daysPassed / camp.totalDays) * 100)}%` }}
@@ -190,11 +204,13 @@ export default function Campaigns() {
                         </div>
                       </div>
                     </td>
-                    <td className="p-4">
-                      <span className="font-mono font-bold text-amber-300">{camp.budgetCoins}</span>
+                    <td className="p-4 whitespace-nowrap">
+                      <span className="font-mono font-bold text-amber-400 text-xs">
+                        {camp.budgetCoins.toLocaleString()} Coins
+                      </span>
                     </td>
-                    <td className="p-4">
-                      <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/30">
+                    <td className="p-4 whitespace-nowrap">
+                      <span className="px-2.5 py-1 text-[10px] font-bold rounded-full uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/30">
                         {camp.playStoreStatus}
                       </span>
                     </td>
