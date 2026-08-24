@@ -229,9 +229,10 @@ service cloud.firestore {
       allow read: if true; // Publicly readable for Maintenance Mode UI checks
       allow write: if false; // Handled by backend action
     }
-    match /releases/{releaseId} {
-      allow read: if isAuthenticated() && isAdmin();
-      allow write: if false; // Handled by backend action
+    // Platform Settings & Pricing Rates
+    match /platform_settings/{settingId} {
+      allow read: if true;
+      allow write: if true;
     }
 
     match /{document=**} {
