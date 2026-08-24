@@ -16,14 +16,29 @@ import {
   Sliders,
   Award,
   Zap,
-  Info
+  Info,
+  AlertTriangle,
+  CreditCard
 } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
+import { db } from '@/lib/firebase';
+import { 
+  collection, 
+  doc, 
+  getDoc, 
+  updateDoc, 
+  setDoc, 
+  onSnapshot, 
+  serverTimestamp,
+  query,
+  where
+} from 'firebase/firestore';
 
 import { subscribeToLivePricingRates, DEFAULT_PRICING_RATES, PricingRates } from '@/lib/pricingRates';
 
 interface Project {
-  id: number;
+  id: string | number;
   name: string;
   package: string;
   category: string;
@@ -35,17 +50,27 @@ interface Project {
   testers: string;
   daysRemaining: number;
   budgetCoins: string;
+  costNumber: number;
   description: string;
   playStoreUrl?: string;
+  createdAt?: string;
 }
 
 export default function CustomerProjects() {
+  const { user, firebaseUser } = useAuth();
+  const userId = firebaseUser?.uid || user?.id;
+
   const [rates, setRates] = useState<PricingRates>(DEFAULT_PRICING_RATES);
   const [showAddModal, setShowAddModal] = useState(false);
   const [playStoreUrl, setPlayStoreUrl] = useState('');
   const [isFetching, setIsFetching] = useState(false);
   const [fetchedData, setFetchedData] = useState<any>(null);
   const [instructions, setInstructions] = useState('');
+
+  // User Live Coin Balance
+  const [userCoinsBalance, setUserCoinsBalance] = useState<number>(0);
+  const [insufficientFundsError, setInsufficientFundsError] = useState<string | null>(null);
+  const [isSubmittingCampaign, setIsSubmittingCampaign] = useState(false);
 
   // Customizable Campaign Configuration
   const [testerCount, setTesterCount] = useState<number>(20);
@@ -55,27 +80,92 @@ export default function CustomerProjects() {
 
   const [projects, setProjects] = useState<Project[]>([]);
 
+  // 1. Listen to pricing rates
   useEffect(() => {
-    const unsub = subscribeToLivePricingRates((liveRates) => {
+    const unsubRates = subscribeToLivePricingRates((liveRates) => {
       setRates(liveRates);
       if (liveRates.dailyTesterPayout) setDailyRate(liveRates.dailyTesterPayout);
     });
 
-    try {
-      const saved = localStorage.getItem('user_apps_campaigns');
-      if (saved) {
-        setProjects(JSON.parse(saved));
-      }
-    } catch (e) {
-      console.error(e);
-    }
-
     return () => {
-      if (unsub) unsub();
+      if (unsubRates) unsubRates();
     };
   }, []);
 
-  const saveProjects = (newProjects: Project[]) => {
+  // 2. Real-time listen to user's coins balance
+  useEffect(() => {
+    if (!userId) return;
+
+    try {
+      const unsubUser = onSnapshot(doc(db, 'users', userId), (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const bal = data.coinsBalance !== undefined ? Number(data.coinsBalance) :
+                      data.coins !== undefined ? Number(data.coins) : 0;
+          setUserCoinsBalance(bal);
+        }
+      });
+
+      return () => unsubUser();
+    } catch (err) {
+      console.warn('Coins balance listener error:', err);
+    }
+  }, [userId]);
+
+  // 3. Load user campaigns from Firestore + local cache
+  useEffect(() => {
+    if (!userId) {
+      try {
+        const saved = localStorage.getItem('user_apps_campaigns');
+        if (saved) setProjects(JSON.parse(saved));
+      } catch (e) {
+        console.error(e);
+      }
+      return;
+    }
+
+    try {
+      const q = query(collection(db, 'campaigns'), where('developerId', '==', userId));
+      const unsubCamps = onSnapshot(q, (snapshot) => {
+        if (!snapshot.empty) {
+          const list: Project[] = snapshot.docs.map(d => {
+            const data = d.data();
+            return {
+              id: d.id,
+              name: data.appName || data.name || 'Android App',
+              package: data.packageId || data.package || '',
+              category: data.category || 'Tools',
+              icon: data.icon || '📱',
+              status: data.playStoreStatus || data.status || 'Active Testing',
+              testersCount: data.targetTesters || data.testersCount || 20,
+              durationDays: data.totalDays || data.durationDays || 14,
+              dailyReward: data.dailyReward || 100,
+              testers: `${data.activeTesters || 0}/${data.targetTesters || 20} Testers Assigned`,
+              daysRemaining: Math.max(0, (data.totalDays || 14) - (data.daysPassed || 0)),
+              budgetCoins: `${(data.costCoins || data.budgetCoins || 2000).toLocaleString()} Coins`,
+              costNumber: data.costCoins || 2000,
+              description: data.description || '',
+              playStoreUrl: data.playStoreUrl || ''
+            };
+          });
+          setProjects(list);
+          localStorage.setItem('user_apps_campaigns', JSON.stringify(list));
+        } else {
+          // Fallback to local storage if firestore campaigns is empty
+          const saved = localStorage.getItem('user_apps_campaigns');
+          if (saved) setProjects(JSON.parse(saved));
+        }
+      }, (err) => {
+        console.warn('Campaigns listener notice', err);
+      });
+
+      return () => unsubCamps();
+    } catch (err) {
+      console.warn('Campaigns fetch notice:', err);
+    }
+  }, [userId]);
+
+  const saveProjectsLocally = (newProjects: Project[]) => {
     setProjects(newProjects);
     try {
       localStorage.setItem('user_apps_campaigns', JSON.stringify(newProjects));
@@ -121,6 +211,7 @@ export default function CustomerProjects() {
   // Real-Time Play Store Scraper & Real Logo Fetcher
   const handleUrlChange = async (url: string) => {
     setPlayStoreUrl(url);
+    setInsufficientFundsError(null);
     if (!url.trim()) {
       setFetchedData(null);
       return;
@@ -156,41 +247,120 @@ export default function CustomerProjects() {
     }
   };
 
-  const handleLaunchCampaign = () => {
+  // SECURE CAMPAIGN LAUNCH WITH COIN DEDUCTION & VALIDATION
+  const handleLaunchCampaign = async () => {
     if (!fetchedData) return;
+    setInsufficientFundsError(null);
 
-    const newProject: Project = {
-      id: Date.now(),
-      name: fetchedData.name,
-      package: fetchedData.package,
-      category: fetchedData.category,
-      icon: fetchedData.icon,
-      status: `Active (${durationDays}-Day Track)`,
-      testersCount: testerCount,
-      durationDays: durationDays,
-      dailyReward: dailyRate,
-      testers: `0/${testerCount} Testers Joined`,
-      daysRemaining: durationDays,
-      budgetCoins: `${calculatedCost.toLocaleString()} Coins`,
-      description: instructions || fetchedData.description,
-      playStoreUrl: fetchedData.playStoreUrl
-    };
+    // 1. STRICT BALANCE VALIDATION
+    if (userCoinsBalance < calculatedCost) {
+      const shortage = calculatedCost - userCoinsBalance;
+      setInsufficientFundsError(
+        `⚠️ Insufficient Coin Balance! You have ${userCoinsBalance.toLocaleString()} Coins, but this testing campaign requires ${calculatedCost.toLocaleString()} Coins (Short by ${shortage.toLocaleString()} Coins). Please buy coins to launch.`
+      );
+      return;
+    }
 
-    const updated = [newProject, ...projects];
-    saveProjects(updated);
-    setShowAddModal(false);
-    setPlayStoreUrl('');
-    setFetchedData(null);
-    setInstructions('');
-    alert(`🎉 Campaign for "${newProject.name}" launched! ${testerCount} testers assigned for ${durationDays} days.`);
-  };
+    setIsSubmittingCampaign(true);
 
-  const handleDeleteApp = (id: number) => {
-    if (confirm('Are you sure you want to remove this app campaign?')) {
-      const filtered = projects.filter(p => p.id !== id);
-      saveProjects(filtered);
+    try {
+      const newCampaignId = `CMP-${Date.now()}`;
+      const newBal = userCoinsBalance - calculatedCost;
+
+      // 2. DEDUCT COINS IN FIRESTORE USER DOC
+      if (userId) {
+        const userRef = doc(db, 'users', userId);
+        await updateDoc(userRef, {
+          coinsBalance: newBal,
+          coins: newBal,
+          updatedAt: new Date().toISOString()
+        });
+
+        // Sync wallets collection
+        try {
+          const walletRef = doc(db, 'wallets', userId);
+          const wSnap = await getDoc(walletRef);
+          if (wSnap.exists()) {
+            await updateDoc(walletRef, {
+              balance: newBal,
+              coins: newBal,
+              updatedAt: new Date().toISOString()
+            });
+          }
+        } catch (wErr) {
+          console.warn('Wallet doc update optional notice:', wErr);
+        }
+
+        // 3. WRITE TO FIRESTORE CAMPAIGNS COLLECTION (REAL DATA)
+        const campaignRef = doc(db, 'campaigns', newCampaignId);
+        await setDoc(campaignRef, {
+          id: newCampaignId,
+          developerId: userId,
+          developerEmail: firebaseUser?.email || user?.email || 'developer@example.com',
+          developerName: firebaseUser?.displayName || (user as any)?.displayName || (user as any)?.name || 'Developer',
+          appName: fetchedData.name,
+          packageId: fetchedData.package,
+          category: fetchedData.category,
+          icon: fetchedData.icon || '📱',
+          costCoins: calculatedCost,
+          budgetCoins: `${calculatedCost.toLocaleString()} 🪙`,
+          targetTesters: testerCount,
+          activeTesters: 0,
+          totalDays: durationDays,
+          daysPassed: 0,
+          playStoreStatus: 'Testing in Progress',
+          playStoreUrl: fetchedData.playStoreUrl,
+          instructions: instructions || fetchedData.description,
+          createdAt: serverTimestamp(),
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      // Update local storage and UI
+      const newProject: Project = {
+        id: newCampaignId,
+        name: fetchedData.name,
+        package: fetchedData.package,
+        category: fetchedData.category,
+        icon: fetchedData.icon,
+        status: `Active (${durationDays}-Day Track)`,
+        testersCount: testerCount,
+        durationDays: durationDays,
+        dailyReward: dailyRate,
+        testers: `0/${testerCount} Testers Assigned`,
+        daysRemaining: durationDays,
+        budgetCoins: `${calculatedCost.toLocaleString()} Coins`,
+        costNumber: calculatedCost,
+        description: instructions || fetchedData.description,
+        playStoreUrl: fetchedData.playStoreUrl
+      };
+
+      const updated = [newProject, ...projects];
+      saveProjectsLocally(updated);
+      setUserCoinsBalance(newBal);
+      localStorage.setItem('user_coins_balance', String(newBal));
+
+      setShowAddModal(false);
+      setPlayStoreUrl('');
+      setFetchedData(null);
+      setInstructions('');
+      alert(`🎉 Campaign for "${newProject.name}" launched successfully!\n\n💰 ${calculatedCost.toLocaleString()} Coins deducted. Remaining balance: ${newBal.toLocaleString()} Coins.`);
+    } catch (err) {
+      console.error('Failed to launch campaign:', err);
+      alert('Could not complete campaign launch. Please check your connection.');
+    } finally {
+      setIsSubmittingCampaign(false);
     }
   };
+
+  const handleDeleteApp = (id: string | number) => {
+    if (confirm('Are you sure you want to remove this app campaign?')) {
+      const filtered = projects.filter(p => p.id !== id);
+      saveProjectsLocally(filtered);
+    }
+  };
+
+  const isAffordable = userCoinsBalance >= calculatedCost;
 
   return (
     <ProtectedRoute allowedRoles={['customer', 'tester', 'earner']}>
@@ -207,12 +377,24 @@ export default function CustomerProjects() {
                 Customize tester count (10, 20, 50+), test duration (7-30 days), and launch closed test campaigns!
               </p>
             </div>
-            <button 
-              onClick={() => setShowAddModal(true)}
-              className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-blue-600/20"
-            >
-              <Plus className="w-4 h-4" /> Add & Test New App
-            </button>
+            
+            <div className="flex items-center gap-3">
+              <Link 
+                href="/customer/billing"
+                className="px-3.5 py-2.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 border border-amber-500/30 rounded-xl font-bold text-xs flex items-center gap-1.5 transition"
+              >
+                <Coins className="w-4 h-4 text-amber-600" /> {userCoinsBalance.toLocaleString()} Coins
+              </Link>
+              <button 
+                onClick={() => {
+                  setShowAddModal(true);
+                  setInsufficientFundsError(null);
+                }}
+                className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-blue-600/20 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" /> Add & Test New App
+              </button>
+            </div>
           </div>
 
           {/* Clean State: If No Apps Yet */}
@@ -226,8 +408,11 @@ export default function CustomerProjects() {
                 Paste your Google Play Store link (e.g. closed testing track or live app) to auto-fetch the real logo, customize your testers count and launch!
               </p>
               <button 
-                onClick={() => setShowAddModal(true)}
-                className="mt-6 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-xs rounded-xl transition shadow-md flex items-center gap-2"
+                onClick={() => {
+                  setShowAddModal(true);
+                  setInsufficientFundsError(null);
+                }}
+                className="mt-6 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-xs rounded-xl transition shadow-md flex items-center gap-2 cursor-pointer"
               >
                 <Plus className="w-4 h-4" /> Paste Play Store Link & Add App
               </button>
@@ -257,7 +442,8 @@ export default function CustomerProjects() {
                         </span>
                         <button 
                           onClick={() => handleDeleteApp(proj.id)}
-                          className="text-zinc-400 hover:text-red-500 p-1 rounded-lg transition"
+                          className="text-zinc-400 hover:text-red-500 p-1 rounded-lg transition cursor-pointer"
+                          title="Delete App Campaign"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -289,7 +475,10 @@ export default function CustomerProjects() {
 
               {/* Add New Card */}
               <div 
-                onClick={() => setShowAddModal(true)}
+                onClick={() => {
+                  setShowAddModal(true);
+                  setInsufficientFundsError(null);
+                }}
                 className="border-2 border-dashed border-zinc-300 hover:border-indigo-500 hover:bg-indigo-50/20 rounded-3xl flex flex-col items-center justify-center p-8 text-center bg-white cursor-pointer transition-all min-h-[260px] group"
               >
                 <div className="w-14 h-14 bg-zinc-100 group-hover:bg-indigo-100 text-zinc-400 group-hover:text-indigo-600 rounded-2xl flex items-center justify-center mb-4 transition">
@@ -304,21 +493,61 @@ export default function CustomerProjects() {
           {/* ADVANCED ADD APP & CAMPAIGN CUSTOMIZER MODAL */}
           {showAddModal && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full p-6 md:p-8 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200">
-                <div className="flex items-center justify-between mb-4">
+              <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full p-6 md:p-8 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200 space-y-4">
+                <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
                       <Sparkles className="w-4 h-4" />
                     </div>
                     <div>
                       <h3 className="text-lg font-black text-zinc-900">Custom Campaign Builder</h3>
-                      <p className="text-xs text-zinc-500">Auto-fetches app logo & allows customizable tester packages</p>
+                      <p className="text-xs text-zinc-500">Auto-fetches app logo & verifies sufficient coin balance</p>
                     </div>
                   </div>
-                  <button onClick={() => setShowAddModal(false)} className="text-zinc-400 hover:text-zinc-600 text-lg font-bold">✕</button>
+                  <button onClick={() => setShowAddModal(false)} className="text-zinc-400 hover:text-zinc-600 text-lg font-bold cursor-pointer">✕</button>
                 </div>
 
-                <div className="space-y-5 mb-6">
+                {/* USER COIN BALANCE NOTIFICATION BADGE */}
+                <div className={`p-3 rounded-2xl border flex items-center justify-between text-xs ${
+                  isAffordable 
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-900' 
+                    : 'bg-amber-50 border-amber-200 text-amber-900'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <Coins className="w-4 h-4 text-amber-600" />
+                    <span className="font-semibold">Your Wallet Balance:</span>
+                    <strong className="font-mono font-black text-sm">{userCoinsBalance.toLocaleString()} Coins</strong>
+                  </div>
+                  {!isAffordable && (
+                    <Link 
+                      href="/customer/billing" 
+                      target="_blank"
+                      className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-[11px] flex items-center gap-1 shadow"
+                    >
+                      <CreditCard className="w-3 h-3" /> Buy Coins
+                    </Link>
+                  )}
+                </div>
+
+                {/* INSUFFICIENT FUNDS ERROR BANNER */}
+                {insufficientFundsError && (
+                  <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold space-y-2 animate-in fade-in slide-in-from-top-1">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                      <p>{insufficientFundsError}</p>
+                    </div>
+                    <div className="pt-1 flex justify-end">
+                      <Link 
+                        href="/customer/billing"
+                        className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs transition shadow flex items-center gap-1.5"
+                      >
+                        <Coins className="w-3.5 h-3.5" /> Deposit Funds / Buy Coins Now &rarr;
+                      </Link>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-4">
                   {/* URL Input Box */}
                   <div>
                     <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1.5">
@@ -329,7 +558,7 @@ export default function CustomerProjects() {
                         type="text" 
                         value={playStoreUrl}
                         onChange={(e) => handleUrlChange(e.target.value)}
-                        placeholder="https://play.google.com/store/apps/details?id=com.whatsapp" 
+                        placeholder="https://play.google.com/store/apps/details?id=com.example.app" 
                         className="w-full bg-zinc-50 border border-zinc-300 rounded-2xl px-4 py-3 text-xs md:text-sm focus:ring-2 focus:ring-blue-500 outline-none pr-10 font-mono"
                       />
                       {isFetching && (
@@ -373,7 +602,7 @@ export default function CustomerProjects() {
                       <button
                         type="button"
                         onClick={() => applyPreset('playstore')}
-                        className={`p-3 rounded-2xl border text-left transition-all ${
+                        className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                           selectedPreset === 'playstore' 
                             ? 'bg-blue-50 border-blue-600 text-blue-900 shadow-sm ring-1 ring-blue-600' 
                             : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100 text-zinc-700'
@@ -384,12 +613,12 @@ export default function CustomerProjects() {
                         <p className="text-[11px] text-zinc-500 font-medium">{rates.base20Days || 14} Days • {(rates.base20TesterCost ?? 200).toLocaleString()} Coins</p>
                       </button>
 
-                      {/* 2. Quick Audit (Hide if disabled in SaaS panel) */}
+                      {/* 2. Quick Audit */}
                       {(rates.quickEnabled !== false) && (
                         <button
                           type="button"
                           onClick={() => applyPreset('quick')}
-                          className={`p-3 rounded-2xl border text-left transition-all ${
+                          className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                             selectedPreset === 'quick' 
                               ? 'bg-blue-50 border-blue-600 text-blue-900 shadow-sm ring-1 ring-blue-600' 
                               : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100 text-zinc-700'
@@ -401,12 +630,12 @@ export default function CustomerProjects() {
                         </button>
                       )}
 
-                      {/* 3. Pro Coverage (Hide if disabled in SaaS panel) */}
+                      {/* 3. Pro Coverage */}
                       {(rates.proEnabled !== false) && (
                         <button
                           type="button"
                           onClick={() => applyPreset('pro')}
-                          className={`p-3 rounded-2xl border text-left transition-all ${
+                          className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                             selectedPreset === 'pro' 
                               ? 'bg-blue-50 border-blue-600 text-blue-900 shadow-sm ring-1 ring-blue-600' 
                               : 'bg-zinc-50 border-zinc-200 hover:bg-zinc-100 text-zinc-700'
@@ -429,7 +658,7 @@ export default function CustomerProjects() {
                       <button 
                         type="button" 
                         onClick={() => setSelectedPreset('custom')}
-                        className="text-[11px] font-bold text-blue-600 hover:underline"
+                        className="text-[11px] font-bold text-blue-600 hover:underline cursor-pointer"
                       >
                         Custom Mode
                       </button>
@@ -448,7 +677,7 @@ export default function CustomerProjects() {
                           max={100} 
                           step={5}
                           value={testerCount}
-                          onChange={(e) => { setTesterCount(Number(e.target.value)); setSelectedPreset('custom'); }}
+                          onChange={(e) => { setTesterCount(Number(e.target.value)); setSelectedPreset('custom'); setInsufficientFundsError(null); }}
                           className="w-full accent-blue-600 cursor-pointer h-2 bg-zinc-200 rounded-lg"
                         />
                         <input 
@@ -456,11 +685,10 @@ export default function CustomerProjects() {
                           min={1}
                           max={500}
                           value={testerCount}
-                          onChange={(e) => { setTesterCount(Math.max(1, Number(e.target.value))); setSelectedPreset('custom'); }}
+                          onChange={(e) => { setTesterCount(Math.max(1, Number(e.target.value))); setSelectedPreset('custom'); setInsufficientFundsError(null); }}
                           className="w-16 px-2 py-1 bg-white border border-zinc-300 rounded-xl text-xs font-bold text-center font-mono"
                         />
                       </div>
-                      <p className="text-[10px] text-zinc-400 mt-1">Google Play Console closed testing requires at least 20 testers.</p>
                     </div>
 
                     {/* 2. Duration Selector */}
@@ -474,8 +702,8 @@ export default function CustomerProjects() {
                           <button
                             key={d}
                             type="button"
-                            onClick={() => { setDurationDays(d); setSelectedPreset('custom'); }}
-                            className={`py-1.5 text-xs font-bold rounded-xl border transition ${
+                            onClick={() => { setDurationDays(d); setSelectedPreset('custom'); setInsufficientFundsError(null); }}
+                            className={`py-1.5 text-xs font-bold rounded-xl border transition cursor-pointer ${
                               durationDays === d 
                                 ? 'bg-indigo-600 text-white border-indigo-600 shadow' 
                                 : 'bg-white text-zinc-700 border-zinc-300 hover:bg-zinc-100'
@@ -494,11 +722,11 @@ export default function CustomerProjects() {
                         <p className="text-xs text-zinc-600">{testerCount} testers × {durationDays} days</p>
                       </div>
                       <div className="text-right">
-                        <div className="flex items-center gap-1 text-base font-black text-amber-600">
-                          <Coins className="w-4 h-4 text-amber-500" />
+                        <div className={`flex items-center gap-1 text-base font-black ${isAffordable ? 'text-amber-600' : 'text-red-600'}`}>
+                          <Coins className="w-4 h-4" />
                           <span>{calculatedCost.toLocaleString()} Coins</span>
                         </div>
-                        <p className="text-[10px] text-emerald-600 font-bold">
+                        <p className="text-[10px] text-zinc-500 font-medium">
                           ≈ ${(calculatedCost / (rates.coinsPerUsd || 100)).toFixed(2)} USD (Rs {Math.round((calculatedCost / (rates.coinsPerUsd || 100)) * (rates.pkrPerUsd || 280)).toLocaleString()} PKR)
                         </p>
                       </div>
@@ -520,20 +748,38 @@ export default function CustomerProjects() {
                   </div>
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex gap-3 pt-2">
                   <button 
                     onClick={() => setShowAddModal(false)}
-                    className="flex-1 px-4 py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-semibold text-xs rounded-xl transition"
+                    className="flex-1 px-4 py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-semibold text-xs rounded-xl transition cursor-pointer"
                   >
                     Cancel
                   </button>
-                  <button 
-                    onClick={handleLaunchCampaign}
-                    disabled={!fetchedData}
-                    className="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl transition shadow-lg shadow-blue-600/20 disabled:opacity-40"
-                  >
-                    🚀 Launch Campaign ({calculatedCost.toLocaleString()} Coins)
-                  </button>
+                  
+                  {isAffordable ? (
+                    <button 
+                      onClick={handleLaunchCampaign}
+                      disabled={!fetchedData || isSubmittingCampaign}
+                      className="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl transition shadow-lg shadow-blue-600/20 disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      {isSubmittingCampaign ? (
+                        <>
+                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Deducting Coins & Launching...</span>
+                        </>
+                      ) : (
+                        `🚀 Launch Campaign (${calculatedCost.toLocaleString()} Coins)`
+                      )}
+                    </button>
+                  ) : (
+                    <Link
+                      href="/customer/billing"
+                      target="_blank"
+                      className="flex-1 px-4 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold text-xs rounded-xl transition shadow-lg shadow-amber-600/20 flex items-center justify-center gap-2 text-center"
+                    >
+                      <CreditCard className="w-4 h-4" /> Deposit Coins to Launch
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>
