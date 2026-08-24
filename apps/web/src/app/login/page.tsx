@@ -14,12 +14,32 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  const getFriendlyErrorMessage = (err: any) => {
+    const code = err?.code || '';
+    if (code.includes('invalid-credential') || code.includes('wrong-password') || code.includes('user-not-found')) {
+      return 'Email ya Password ghalat hai. Agar account nahi bana hua toh pehle "Register" karein ya direct "Sign in with Google" use karein.';
+    }
+    if (code.includes('email-already-in-use')) {
+      return 'Yeh email pehle se registered hai. Please Login karein.';
+    }
+    if (code.includes('popup-closed-by-user') || code.includes('cancelled-popup-request')) {
+      return 'Google sign-in popup cancel kar diya gaya tha. Dobara try karein.';
+    }
+    if (code.includes('invalid-email')) {
+      return 'Durust email format likhein (e.g. yourname@gmail.com).';
+    }
+    if (code.includes('too-many-requests')) {
+      return 'Bohat zyada attempts ho chuki hain. Thori dair baad koshish karein.';
+    }
+    return err?.message || 'Login failed. Please check your credentials.';
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
       const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
       
       if (userDoc.exists()) {
@@ -33,7 +53,8 @@ export default function Login() {
         router.push('/tester/dashboard');
       }
     } catch (err: any) {
-      setError(err.message || 'Invalid email or password');
+      console.error(err);
+      setError(getFriendlyErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -44,6 +65,7 @@ export default function Login() {
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
@@ -57,18 +79,19 @@ export default function Login() {
           email: user.email,
           role: 'tester',
           status: 'active',
-          coins: 15000,
+          coins: 0,
           trustScore: 98,
           emailVerified: true,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
-        await setDoc(userRef, userDoc);
+        await setDoc(userRef, userDoc, { merge: true });
       }
 
       router.push('/tester/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Google Sign-In failed');
+      console.error(err);
+      setError(getFriendlyErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -84,12 +107,12 @@ export default function Login() {
           </div>
           <h1 className="text-2xl font-black text-zinc-900 tracking-tight">Login to 12 Test Gig</h1>
           <p className="text-xs text-zinc-500 mt-1">
-            Access your unified creator, testing & earning workspace
+            Access your creator, testing & earning account
           </p>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold text-center">
+          <div className="mb-4 p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold leading-relaxed animate-in fade-in">
             {error}
           </div>
         )}
@@ -118,26 +141,26 @@ export default function Login() {
               d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
             />
           </svg>
-          Sign in with Google
+          1-Click Login with Gmail (Google)
         </button>
 
         <div className="flex items-center my-4">
           <div className="flex-1 h-px bg-zinc-200" />
-          <span className="px-3 text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Or with Email</span>
+          <span className="px-3 text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Or with Email & Password</span>
           <div className="flex-1 h-px bg-zinc-200" />
         </div>
 
         {/* Form */}
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1.5">Email</label>
+            <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1.5">Email Address</label>
             <div className="relative">
               <Mail className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input 
                 type="email" 
                 value={email} 
                 onChange={(e) => setEmail(e.target.value)} 
-                placeholder="name@example.com"
+                placeholder="e.g. name@example.com"
                 required 
                 className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl pl-10 pr-4 py-2.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none" 
               />
@@ -164,13 +187,13 @@ export default function Login() {
             disabled={loading}
             className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-2xl transition flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 disabled:opacity-50"
           >
-            {loading ? 'Logging in...' : 'Sign In'}
+            {loading ? 'Logging in...' : 'Sign In with Email'}
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
 
         <p className="mt-5 text-center text-xs text-zinc-500">
-          Don't have an account? <Link href="/register" className="font-bold text-blue-600 hover:underline">Register now</Link>
+          Don't have an account yet? <Link href="/register" className="font-bold text-blue-600 hover:underline">Register now</Link>
         </p>
       </div>
     </div>

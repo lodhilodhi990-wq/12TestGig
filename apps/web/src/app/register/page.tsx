@@ -4,7 +4,7 @@ import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } f
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
-import { Code, Lock, Mail, User as UserIcon, Sparkles, ShieldCheck, ArrowRight } from 'lucide-react';
+import { Code, Lock, Mail, User as UserIcon, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 export default function Register() {
@@ -15,31 +15,49 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  const getFriendlyErrorMessage = (err: any) => {
+    const code = err?.code || '';
+    if (code.includes('email-already-in-use')) {
+      return 'Yeh email already registered hai. Meherbani karke Login page par jayein.';
+    }
+    if (code.includes('weak-password')) {
+      return 'Password kam az kam 6 characters ka hona chahiye.';
+    }
+    if (code.includes('popup-closed-by-user') || code.includes('cancelled-popup-request')) {
+      return 'Google sign-up window close kar di gayi thi. Dobara koshish karein.';
+    }
+    if (code.includes('invalid-email')) {
+      return 'Durust email format likhein (e.g. yourname@gmail.com).';
+    }
+    return err?.message || 'Registration failed. Please check your information.';
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
       
       const userDoc = {
         id: userCredential.user.uid,
-        fullName,
-        email,
-        role: 'tester', // All-in-One standard account role
+        fullName: fullName.trim() || 'New User',
+        email: email.trim(),
+        role: 'tester',
         status: 'active',
-        coins: 15000, // Welcome starting bonus coins
+        coins: 0,
         trustScore: 95,
         emailVerified: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
 
-      await setDoc(doc(db, 'users', userCredential.user.uid), userDoc);
+      await setDoc(doc(db, 'users', userCredential.user.uid), userDoc, { merge: true });
       router.push('/tester/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Failed to register account');
+      console.error(err);
+      setError(getFriendlyErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -50,10 +68,10 @@ export default function Register() {
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      // Check if user doc exists
       const userRef = doc(db, 'users', user.uid);
       const snap = await getDoc(userRef);
 
@@ -64,18 +82,19 @@ export default function Register() {
           email: user.email,
           role: 'tester',
           status: 'active',
-          coins: 15000,
+          coins: 0,
           trustScore: 98,
           emailVerified: true,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
-        await setDoc(userRef, userDoc);
+        await setDoc(userRef, userDoc, { merge: true });
       }
 
       router.push('/tester/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Failed to sign up with Google');
+      console.error(err);
+      setError(getFriendlyErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -91,12 +110,12 @@ export default function Register() {
           </div>
           <h1 className="text-2xl font-black text-zinc-900 tracking-tight">Create Your Account</h1>
           <p className="text-xs text-zinc-500 mt-1">
-            All-in-One access: Test apps, launch 20-tester campaigns & earn cash!
+            All-in-One: Launch 20-tester tests, test apps & earn coins
           </p>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold text-center">
+          <div className="mb-4 p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold leading-relaxed animate-in fade-in">
             {error}
           </div>
         )}
@@ -125,12 +144,12 @@ export default function Register() {
               d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
             />
           </svg>
-          Continue with Google
+          1-Click Sign Up with Gmail (Google)
         </button>
 
         <div className="flex items-center my-4">
           <div className="flex-1 h-px bg-zinc-200" />
-          <span className="px-3 text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Or with Email</span>
+          <span className="px-3 text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Or with Email & Password</span>
           <div className="flex-1 h-px bg-zinc-200" />
         </div>
 
@@ -174,8 +193,9 @@ export default function Register() {
                 type="password" 
                 value={password} 
                 onChange={(e) => setPassword(e.target.value)} 
-                placeholder="••••••••"
+                placeholder="Min 6 characters"
                 required 
+                minLength={6}
                 className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl pl-10 pr-4 py-2.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none" 
               />
             </div>
@@ -186,7 +206,7 @@ export default function Register() {
             disabled={loading}
             className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-2xl transition flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 disabled:opacity-50"
           >
-            {loading ? 'Creating Account...' : 'Register & Get Started'}
+            {loading ? 'Creating Account...' : 'Register Account'}
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
