@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Eye, Coins, Search, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
-import { collection, onSnapshot, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, getDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 export interface Deposit {
@@ -97,9 +97,34 @@ export default function Deposits() {
                 updatedAt: new Date().toISOString()
               });
             }
+
+            // Create in-app notification
+            await addDoc(collection(db, 'notifications'), {
+              userId: depItem.userId,
+              title: '🪙 Deposit Approved & Coins Credited!',
+              message: `Your deposit of ${depItem.amountUsd} (${depItem.coinsToCredit}) has been verified. Coins are ready in your wallet.`,
+              type: 'deposit',
+              read: false,
+              link: '/customer/billing',
+              createdAt: serverTimestamp()
+            });
           } catch (uErr) {
             console.warn('Failed to auto-increment user coins balance:', uErr);
           }
+        }
+      } else if (newStatus === 'rejected' && depItem.userId) {
+        try {
+          await addDoc(collection(db, 'notifications'), {
+            userId: depItem.userId,
+            title: '❌ Deposit Request Rejected',
+            message: `Your deposit request of ${depItem.amountUsd} via ${depItem.method} was rejected. Please verify your receipt TID and resubmit.`,
+            type: 'deposit',
+            read: false,
+            link: '/customer/billing',
+            createdAt: serverTimestamp()
+          });
+        } catch (nErr) {
+          console.warn('Notification error:', nErr);
         }
       }
 

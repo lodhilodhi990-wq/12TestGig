@@ -8,7 +8,7 @@ import {
   Coins, 
   ShieldCheck
 } from 'lucide-react';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, getDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 interface Withdrawal {
@@ -19,7 +19,8 @@ interface Withdrawal {
   amountCoins: number;
   amountUsd: number;
   amountPkr: number;
-  method: 'easypaisa' | 'jazzcash' | 'bank' | 'payoneer';
+  method: string;
+  methodTitle?: string;
   accountNumber: string;
   accountTitle: string;
   status: 'pending' | 'approved' | 'rejected' | 'paid';
@@ -77,11 +78,25 @@ export default function Withdrawals() {
     localStorage.setItem('admin_withdrawal_requests', JSON.stringify(updated));
 
     try {
+      const tid = adminTid || `TID-${Date.now().toString().slice(-6)}`;
       await updateDoc(doc(db, 'withdrawal_requests', w.id), {
         status: 'paid',
-        transactionId: adminTid || `TID-${Date.now().toString().slice(-6)}`,
+        transactionId: tid,
         paidAt: new Date().toISOString()
       });
+
+      // Send User Notification
+      if (w.userId) {
+        await addDoc(collection(db, 'notifications'), {
+          userId: w.userId,
+          title: '💸 Payout Sent & Completed!',
+          message: `Your cashout of ${w.amountCoins.toLocaleString()} Coins (Rs ${w.amountPkr.toLocaleString()} PKR) via ${w.methodTitle || w.method} has been sent! Reference TID: ${tid}`,
+          type: 'payout',
+          read: false,
+          link: '/tester/wallet',
+          createdAt: serverTimestamp()
+        });
+      }
     } catch (e) {
       console.warn('Firestore update note', e);
     } finally {
@@ -116,7 +131,7 @@ export default function Withdrawals() {
         rejectedAt: new Date().toISOString()
       });
 
-      // Automatically Refund Coins to User
+      // Automatically Refund Coins to User & send notification
       if (w.userId) {
         const userRef = doc(db, 'users', w.userId);
         const snap = await getDoc(userRef);
@@ -129,6 +144,16 @@ export default function Withdrawals() {
             updatedAt: new Date().toISOString()
           });
         }
+
+        await addDoc(collection(db, 'notifications'), {
+          userId: w.userId,
+          title: '⚠️ Withdrawal Rejected & Coins Refunded',
+          message: `Your withdrawal request was rejected (${rejectReason}). ${w.amountCoins.toLocaleString()} Coins have been refunded back to your wallet.`,
+          type: 'payout',
+          read: false,
+          link: '/tester/wallet',
+          createdAt: serverTimestamp()
+        });
       }
     } catch (e) {
       console.warn('Firestore update note', e);
