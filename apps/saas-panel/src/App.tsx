@@ -7,10 +7,14 @@ import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
 import Organizations from './pages/Organizations';
 import Disputes from './pages/Disputes';
-import Settings from './pages/Settings';
 import Deposits from './pages/Deposits';
 import Campaigns from './pages/Campaigns';
 import Withdrawals from './pages/Withdrawals';
+import Pricing from './pages/Pricing';
+import DepositMethods from './pages/DepositMethods';
+import WithdrawalSettings from './pages/WithdrawalSettings';
+import ApiGateways from './pages/ApiGateways';
+import SecurityRules from './pages/SecurityRules';
 import Login from './pages/Login';
 
 function Layout({ children }: { children: React.ReactNode }) {
@@ -66,9 +70,18 @@ function App() {
                 <Route path="/deposits" element={<Deposits />} />
                 <Route path="/withdrawals" element={<Withdrawals />} />
                 <Route path="/campaigns" element={<Campaigns />} />
-                <Route path="/organizations" element={<Organizations />} />
                 <Route path="/disputes" element={<Disputes />} />
-                <Route path="/settings" element={<Settings />} />
+                <Route path="/organizations" element={<Organizations />} />
+                
+                {/* Dedicated Payments & Settings Pages (Replaced Sub-Tabs) */}
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/deposit-methods" element={<DepositMethods />} />
+                <Route path="/withdrawal-settings" element={<WithdrawalSettings />} />
+                <Route path="/api-gateways" element={<ApiGateways />} />
+                <Route path="/security-rules" element={<SecurityRules />} />
+
+                {/* Legacy settings redirect */}
+                <Route path="/settings" element={<Navigate to="/pricing" replace />} />
               </Routes>
             </Layout>
           } 
