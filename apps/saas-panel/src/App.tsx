@@ -10,6 +10,7 @@ import Disputes from './pages/Disputes';
 import Settings from './pages/Settings';
 import Deposits from './pages/Deposits';
 import Campaigns from './pages/Campaigns';
+import Withdrawals from './pages/Withdrawals';
 import Login from './pages/Login';
 
 function Layout({ children }: { children: React.ReactNode }) {
@@ -63,6 +64,7 @@ function App() {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/users" element={<Users />} />
                 <Route path="/deposits" element={<Deposits />} />
+                <Route path="/withdrawals" element={<Withdrawals />} />
                 <Route path="/campaigns" element={<Campaigns />} />
                 <Route path="/organizations" element={<Organizations />} />
                 <Route path="/disputes" element={<Disputes />} />

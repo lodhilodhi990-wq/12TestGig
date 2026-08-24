@@ -8,6 +8,7 @@ import {
   Zap, 
   Coins, 
   Rocket, 
+  ArrowUpRight,
   LogOut
 } from 'lucide-react';
 import { auth } from '../lib/firebase';
@@ -26,6 +27,7 @@ export default function Sidebar() {
     { path: '/dashboard', label: 'Overview', icon: LayoutDashboard },
     { path: '/users', label: 'Users & Risk', icon: Users },
     { path: '/deposits', label: 'Deposits', icon: Coins, badge: 'New' },
+    { path: '/withdrawals', label: 'Withdrawals', icon: ArrowUpRight, badge: 'Payout' },
     { path: '/campaigns', label: 'Campaigns', icon: Rocket },
     { path: '/disputes', label: 'Anti-Scam', icon: ShieldAlert },
     { path: '/organizations', label: 'Orgs', icon: Building },
