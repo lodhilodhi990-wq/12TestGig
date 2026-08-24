@@ -17,6 +17,7 @@ import ApiGateways from './pages/ApiGateways';
 import SecurityRules from './pages/SecurityRules';
 import BlogManager from './pages/BlogManager';
 import AdSenseManager from './pages/AdSenseManager';
+import AlertsManager from './pages/AlertsManager';
 import Login from './pages/Login';
 
 function Layout({ children }: { children: React.ReactNode }) {
@@ -85,6 +86,7 @@ function App() {
                 {/* CMS & Marketing Routes */}
                 <Route path="/blog-manager" element={<BlogManager />} />
                 <Route path="/adsense-manager" element={<AdSenseManager />} />
+                <Route path="/alerts-manager" element={<AlertsManager />} />
 
                 {/* Legacy settings redirect */}
                 <Route path="/settings" element={<Navigate to="/pricing" replace />} />

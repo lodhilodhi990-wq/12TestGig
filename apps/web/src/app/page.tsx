@@ -32,9 +32,12 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import AdSenseBanner from '@/components/AdSenseBanner';
 import { subscribeToLivePricingRates, DEFAULT_PRICING_RATES, PricingRates, PricingPlanItem } from '@/lib/pricingRates';
+import { useLanguage } from '@/lib/i18n';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 export default function MarketingLandingPage() {
   const router = useRouter();
+  const { t } = useLanguage();
 
   // Live Pricing Rates & Plans Stream
   const [rates, setRates] = useState<PricingRates>(DEFAULT_PRICING_RATES);
@@ -166,23 +169,24 @@ export default function MarketingLandingPage() {
           </Link>
 
           <nav className="hidden md:flex items-center gap-8 text-xs font-bold text-slate-300">
-            <a href="#developers" className="hover:text-white transition">For Developers</a>
-            <a href="#testers" className="hover:text-white transition">For Testers</a>
-            <a href="#pricing" className="hover:text-white transition">Pricing Plans</a>
+            <a href="#developers" className="hover:text-white transition">{t('nav.developers', 'For Developers')}</a>
+            <a href="#testers" className="hover:text-white transition">{t('nav.testers', 'For Testers')}</a>
+            <a href="#pricing" className="hover:text-white transition">{t('nav.pricing', 'Pricing Plans')}</a>
             <Link href="/blog" className="hover:text-white transition flex items-center gap-1">
-              <BookOpen className="w-3.5 h-3.5 text-blue-400" /> Blog & Guides
+              <BookOpen className="w-3.5 h-3.5 text-blue-400" /> {t('nav.blog', 'Blog & Guides')}
             </Link>
             <Link href="/tester/support" className="hover:text-white transition flex items-center gap-1">
-              <HelpCircle className="w-3.5 h-3.5 text-emerald-400" /> Support Desk
+              <HelpCircle className="w-3.5 h-3.5 text-emerald-400" /> {t('nav.support', 'Support Desk')}
             </Link>
           </nav>
 
           <div className="flex items-center gap-3">
+            <LanguageSwitcher />
             <button 
               onClick={() => scrollToAuth('customer')}
               className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black transition shadow-lg shadow-blue-600/30 flex items-center gap-1.5 cursor-pointer"
             >
-              <span>Get 20 Testers</span>
+              <span>{t('nav.get20', 'Get 20 Testers')}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>

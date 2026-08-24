@@ -1,16 +1,20 @@
 {
-  "name": "12 Test Gig - App Testing & 20-Tester Hub",
+  "name": "12 Test Gig - Google Play 20-Tester & Earning Cloud",
   "short_name": "12 Test Gig",
-  "description": "Google Play 20-Tester Closed Testing tracks & App Testing Earn Platform",
+  "description": "Get 20 guaranteed Google Play closed testers for 14 continuous days or earn daily cash testing Android apps.",
   "start_url": "/",
+  "id": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "orientation": "portrait",
+  "background_color": "#020617",
   "theme_color": "#2563EB",
+  "categories": ["business", "productivity", "utilities", "developer"],
   "icons": [
     {
       "src": "/favicon.svg",
       "sizes": "any",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     },
     {
       "src": "/icon.svg",
@@ -21,6 +25,29 @@
       "src": "/icon.svg",
       "sizes": "512x512",
       "type": "image/svg+xml"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Tester Daily Tests",
+      "short_name": "Earn Coins",
+      "description": "Open active tests and submit daily screenshot proof",
+      "url": "/tester/tests",
+      "icons": [{ "src": "/icon.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "App Projects",
+      "short_name": "My Apps",
+      "description": "Manage 20-tester closed testing campaigns",
+      "url": "/customer/projects",
+      "icons": [{ "src": "/icon.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Wallet & Payouts",
+      "short_name": "Wallet",
+      "description": "Withdraw earnings to JazzCash, Easypaisa, USDT",
+      "url": "/tester/wallet",
+      "icons": [{ "src": "/icon.svg", "sizes": "192x192" }]
     }
   ]
 }

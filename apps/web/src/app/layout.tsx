@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from '@/context/AuthContext';
+import { LanguageProvider } from '@/lib/i18n';
+import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -129,7 +131,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          {children}
+          <LanguageProvider>
+            {children}
+            <PWAInstallPrompt />
+          </LanguageProvider>
         </AuthProvider>
       </body>
     </html>

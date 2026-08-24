@@ -13,7 +13,8 @@ import {
   CreditCard,
   ShieldCheck,
   BookOpen,
-  Sparkles
+  Sparkles,
+  MessageSquare
 } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { signOut } from 'firebase/auth';
@@ -47,6 +48,7 @@ export default function Sidebar() {
   const marketingCms = [
     { path: '/blog-manager', label: 'SEO Blog & Guides', icon: BookOpen, badge: 'CMS' },
     { path: '/adsense-manager', label: 'Google AdSense Ads', icon: Sparkles, badge: 'Monetize' },
+    { path: '/alerts-manager', label: 'WhatsApp & Email Alerts', icon: MessageSquare, badge: 'Alerts' },
   ];
 
   return (

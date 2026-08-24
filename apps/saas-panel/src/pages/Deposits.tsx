@@ -375,30 +375,48 @@ export default function Deposits() {
               </div>
             )}
 
-            <div className="flex gap-3 pt-2">
-              {selectedReceipt.status === 'pending' ? (
-                <>
-                  <button
-                    onClick={() => handleStatusChange(selectedReceipt, 'approved')}
-                    className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition cursor-pointer"
-                  >
-                    ✓ Approve & Credit Coins
-                  </button>
-                  <button
-                    onClick={() => handleStatusChange(selectedReceipt, 'rejected')}
-                    className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl transition cursor-pointer"
-                  >
-                    ✕ Reject Receipt
-                  </button>
-                </>
-              ) : (
+            <div className="flex flex-col gap-2 pt-2">
+              {selectedReceipt.accountSender && (
                 <button
-                  onClick={() => setSelectedReceipt(null)}
-                  className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl transition cursor-pointer"
+                  type="button"
+                  onClick={() => {
+                    const phone = selectedReceipt.accountSender || '';
+                    let clean = phone.replace(/[^0-9]/g, '');
+                    if (clean.startsWith('03')) clean = '92' + clean.slice(1);
+                    const msg = `Assalam-o-Alaikum ${selectedReceipt.userName || 'User'}! 🎉\nYour deposit of ${selectedReceipt.amountUsd} (${selectedReceipt.coinsToCredit}) via ${selectedReceipt.method} has been verified and APPROVED on 12 Test Gig.\nTrack campaigns: https://12-test-gig.vercel.app/customer/projects`;
+                    window.open(`https://api.whatsapp.com/send?phone=${clean}&text=${encodeURIComponent(msg)}`, '_blank');
+                  }}
+                  className="w-full py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  Close
+                  🟢 Send WhatsApp Confirmation Alert
                 </button>
               )}
+
+              <div className="flex gap-3">
+                {selectedReceipt.status === 'pending' ? (
+                  <>
+                    <button
+                      onClick={() => handleStatusChange(selectedReceipt, 'approved')}
+                      className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition cursor-pointer"
+                    >
+                      ✓ Approve & Credit Coins
+                    </button>
+                    <button
+                      onClick={() => handleStatusChange(selectedReceipt, 'rejected')}
+                      className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl transition cursor-pointer"
+                    >
+                      ✕ Reject Receipt
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setSelectedReceipt(null)}
+                    className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl transition cursor-pointer"
+                  >
+                    Close
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>

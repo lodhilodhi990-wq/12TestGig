@@ -421,12 +421,28 @@ export default function Withdrawals() {
                 />
               </div>
 
-              <div className="flex gap-3 pt-2">
+              {selectedTx.accountNumber && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const phone = selectedTx.accountNumber || '';
+                    let clean = phone.replace(/[^0-9]/g, '');
+                    if (clean.startsWith('03')) clean = '92' + clean.slice(1);
+                    const msg = `Assalam-o-Alaikum ${selectedTx.userName || 'Tester'}! 💰\nYour cashout payout of ${selectedTx.amountCoins.toLocaleString()} Coins (Rs ${selectedTx.amountPkr.toLocaleString()} PKR) via ${selectedTx.method} has been DISPATCHED by 12 Test Gig Admin!\nTransaction Ref: ${adminTid || 'Completed'}\nThank you for testing apps with us!`;
+                    window.open(`https://api.whatsapp.com/send?phone=${clean}&text=${encodeURIComponent(msg)}`, '_blank');
+                  }}
+                  className="w-full py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  🟢 Send WhatsApp Payout Receipt
+                </button>
+              )}
+
+              <div className="flex gap-3 pt-1">
                 <button
                   type="button"
                   disabled={actionLoading}
                   onClick={() => handleReject(selectedTx)}
-                  className="flex-1 py-2.5 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 font-bold text-xs rounded-xl transition"
+                  className="flex-1 py-2.5 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 font-bold text-xs rounded-xl transition cursor-pointer"
                 >
                   Reject & Refund
                 </button>
@@ -434,7 +450,7 @@ export default function Withdrawals() {
                   type="button"
                   disabled={actionLoading}
                   onClick={() => handleApproveAndPay(selectedTx)}
-                  className="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs rounded-xl transition shadow-lg shadow-emerald-600/20"
+                  className="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs rounded-xl transition shadow-lg shadow-emerald-600/20 cursor-pointer"
                 >
                   {actionLoading ? 'Processing...' : 'Approve & Mark Paid'}
                 </button>
