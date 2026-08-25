@@ -1,0 +1,155 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <!-- Background Gradients -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#030712"/>
+      <stop offset="50%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+
+    <linearGradient id="blueGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="50%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#14b8a6"/>
+    </linearGradient>
+
+    <linearGradient id="goldGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+
+    <linearGradient id="emeraldGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+
+    <linearGradient id="cardBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(30, 41, 59, 0.8)"/>
+      <stop offset="100%" stop-color="rgba(15, 23, 42, 0.9)"/>
+    </linearGradient>
+
+    <!-- Glow Filters -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="30" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background Layer -->
+  <rect width="1200" height="630" fill="url(#bgGrad)" />
+
+  <!-- Ambient Glowing Orbs -->
+  <circle cx="150" cy="150" r="250" fill="#2563eb" opacity="0.18" filter="url(#glow)" />
+  <circle cx="1050" cy="450" r="300" fill="#6366f1" opacity="0.15" filter="url(#glow)" />
+  <circle cx="600" cy="100" r="200" fill="#14b8a6" opacity="0.12" filter="url(#glow)" />
+
+  <!-- Grid Overlay -->
+  <g opacity="0.04" stroke="#ffffff" stroke-width="1">
+    <line x1="0" y1="70" x2="1200" y2="70" />
+    <line x1="0" y1="140" x2="1200" y2="140" />
+    <line x1="0" y1="210" x2="1200" y2="210" />
+    <line x1="0" y1="280" x2="1200" y2="280" />
+    <line x1="0" y1="350" x2="1200" y2="350" />
+    <line x1="0" y1="420" x2="1200" y2="420" />
+    <line x1="0" y1="490" x2="1200" y2="490" />
+    <line x1="0" y1="560" x2="1200" y2="560" />
+  </g>
+
+  <!-- BRAND LOGO BADGE -->
+  <g transform="translate(80, 60)">
+    <rect width="48" height="48" rx="14" fill="url(#blueGlow)" />
+    <path d="M24 12 L32 20 L27 25 L29 34 L24 29 L19 34 L21 25 L16 20 Z" fill="#ffffff" />
+    <text x="64" y="32" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="26" fill="#ffffff" letter-spacing="-0.5">12 TEST GIG</text>
+    <rect x="235" y="14" width="180" height="24" rx="12" fill="rgba(59, 130, 246, 0.15)" stroke="rgba(59, 130, 246, 0.4)" stroke-width="1" />
+    <text x="250" y="30" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="11" fill="#60a5fa">GOOGLE PLAY 2026 READY</text>
+  </g>
+
+  <!-- MAIN HEADLINE -->
+  <g transform="translate(80, 175)">
+    <text font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="52" fill="#ffffff" letter-spacing="-1">
+      Pass Google Play Closed Testing
+    </text>
+    <text y="62" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="52" fill="url(#blueGlow)" letter-spacing="-1">
+      20 Real Testers for 14 Days.
+    </text>
+    <text y="115" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="18" fill="#94a3b8">
+      100% Guaranteed Production Approval with Verified Physical Android Devices &amp; Telemetry.
+    </text>
+  </g>
+
+  <!-- 3 FEATURE PILLARS -->
+  <g transform="translate(80, 340)">
+    <!-- Feature 1 -->
+    <rect width="215" height="100" rx="20" fill="url(#cardBg)" stroke="rgba(59, 130, 246, 0.3)" stroke-width="1" />
+    <circle cx="35" cy="38" r="16" fill="rgba(59, 130, 246, 0.2)" />
+    <text x="30" y="44" font-family="system-ui, sans-serif" font-size="16" fill="#60a5fa">📱</text>
+    <text x="62" y="36" font-family="system-ui, sans-serif" font-weight="800" font-size="14" fill="#ffffff">20 Real Phones</text>
+    <text x="62" y="52" font-family="system-ui, sans-serif" font-weight="500" font-size="11" fill="#94a3b8">Zero Emulators / Bots</text>
+    <text x="25" y="82" font-family="system-ui, sans-serif" font-weight="700" font-size="11" fill="#34d399">✓ 100% Android 11-15</text>
+
+    <!-- Feature 2 -->
+    <g transform="translate(230, 0)">
+      <rect width="215" height="100" rx="20" fill="url(#cardBg)" stroke="rgba(16, 185, 129, 0.3)" stroke-width="1" />
+      <circle cx="35" cy="38" r="16" fill="rgba(16, 185, 129, 0.2)" />
+      <text x="30" y="44" font-family="system-ui, sans-serif" font-size="16" fill="#34d399">📅</text>
+      <text x="62" y="36" font-family="system-ui, sans-serif" font-weight="800" font-size="14" fill="#ffffff">14 Days Streak</text>
+      <text x="62" y="52" font-family="system-ui, sans-serif" font-weight="500" font-size="11" fill="#94a3b8">Continuous Daily Testing</text>
+      <text x="25" y="82" font-family="system-ui, sans-serif" font-weight="700" font-size="11" fill="#38bdf8">✓ Zero Dropouts</text>
+    </g>
+
+    <!-- Feature 3 -->
+    <g transform="translate(460, 0)">
+      <rect width="215" height="100" rx="20" fill="url(#cardBg)" stroke="rgba(245, 158, 11, 0.3)" stroke-width="1" />
+      <circle cx="35" cy="38" r="16" fill="rgba(245, 158, 11, 0.2)" />
+      <text x="30" y="44" font-family="system-ui, sans-serif" font-size="16" fill="#fbbf24">📄</text>
+      <text x="62" y="36" font-family="system-ui, sans-serif" font-weight="800" font-size="14" fill="#ffffff">Play Console Report</text>
+      <text x="62" y="52" font-family="system-ui, sans-serif" font-weight="500" font-size="11" fill="#94a3b8">Ready-Made Answers</text>
+      <text x="25" y="82" font-family="system-ui, sans-serif" font-weight="700" font-size="11" fill="#fbbf24">✓ 1-Click PDF Export</text>
+    </g>
+  </g>
+
+  <!-- RIGHT COLUMN: 3D PHONE MOCKUP CARD -->
+  <g transform="translate(810, 110)">
+    <!-- Outer Glow -->
+    <rect width="310" height="450" rx="36" fill="#0f172a" stroke="rgba(99, 102, 241, 0.5)" stroke-width="2" filter="url(#glow)" opacity="0.4" />
+    <rect width="310" height="450" rx="36" fill="#0b1120" stroke="rgba(99, 102, 241, 0.6)" stroke-width="2" />
+    
+    <!-- Phone Screen Header -->
+    <rect x="20" y="25" width="270" height="60" rx="16" fill="rgba(30, 41, 59, 0.6)" />
+    <circle cx="50" cy="55" r="18" fill="url(#blueGlow)" />
+    <text x="44" y="61" font-family="system-ui, sans-serif" font-size="16" fill="#ffffff">🚀</text>
+    <text x="78" y="48" font-family="system-ui, sans-serif" font-weight="800" font-size="13" fill="#ffffff">Ludo Arena 3D</text>
+    <text x="78" y="66" font-family="system-ui, sans-serif" font-weight="600" font-size="10" fill="#34d399">● Day 14/14 Completed</text>
+
+    <!-- Verified Badge -->
+    <rect x="20" y="100" width="270" height="150" rx="20" fill="rgba(16, 185, 129, 0.08)" stroke="rgba(16, 185, 129, 0.3)" stroke-width="1.5" />
+    <circle cx="155" cy="150" r="32" fill="url(#emeraldGlow)" />
+    <text x="141" y="161" font-family="system-ui, sans-serif" font-weight="900" font-size="28" fill="#ffffff">✓</text>
+    <text x="155" y="202" font-family="system-ui, sans-serif" font-weight="900" font-size="14" fill="#34d399" text-anchor="middle">CLOSED TEST PASSED</text>
+    <text x="155" y="222" font-family="system-ui, sans-serif" font-weight="600" font-size="11" fill="#94a3b8" text-anchor="middle">Ready for Production Track</text>
+
+    <!-- Payment Badges in Phone -->
+    <rect x="20" y="265" width="270" height="75" rx="16" fill="rgba(30, 41, 59, 0.5)" stroke="rgba(148, 163, 184, 0.15)" stroke-width="1" />
+    <text x="35" y="290" font-family="system-ui, sans-serif" font-weight="700" font-size="11" fill="#94a3b8">Instant Payment Options:</text>
+    <text x="35" y="318" font-family="system-ui, sans-serif" font-weight="800" font-size="13" fill="#ffffff">JazzCash • Easypaisa • Bank • USDT</text>
+
+    <!-- Live Telemetry Status -->
+    <rect x="20" y="355" width="270" height="70" rx="16" fill="url(#blueGlow)" />
+    <text x="155" y="385" font-family="system-ui, sans-serif" font-weight="900" font-size="14" fill="#ffffff" text-anchor="middle">JOIN AS CERTIFIED TESTER</text>
+    <text x="155" y="405" font-family="system-ui, sans-serif" font-weight="700" font-size="11" fill="rgba(255,255,255,0.85)" text-anchor="middle">Earn Daily Cash from Phone</text>
+  </g>
+
+  <!-- BOTTOM CALL TO ACTION STRIP -->
+  <g transform="translate(80, 485)">
+    <!-- CTA Button -->
+    <rect width="320" height="60" rx="18" fill="url(#blueGlow)" />
+    <text x="160" y="36" font-family="system-ui, sans-serif" font-weight="900" font-size="16" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">
+      START TESTING NOW →
+    </text>
+
+    <!-- URL Indicator -->
+    <text x="350" y="37" font-family="system-ui, monospace" font-weight="800" font-size="20" fill="#38bdf8">
+      12-test-gig.vercel.app
+    </text>
+  </g>
+</svg>
