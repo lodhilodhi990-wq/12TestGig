@@ -16,10 +16,12 @@ import {
   Award, 
   Sliders,
   AlertTriangle,
-  CreditCard
+  CreditCard,
+  FileText
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import TelemetryAuditModal from '@/components/TelemetryAuditModal';
 import { db } from '@/lib/firebase';
 import { 
   collection, 
@@ -60,6 +62,7 @@ export default function CustomerCampaigns() {
   const [isFetching, setIsFetching] = useState(false);
   const [fetchedData, setFetchedData] = useState<any>(null);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [auditModalCamp, setAuditModalCamp] = useState<Campaign | null>(null);
 
   // User Live Coin Balance
   const [userCoinsBalance, setUserCoinsBalance] = useState<number>(0);
@@ -409,22 +412,39 @@ export default function CustomerCampaigns() {
                     </div>
                   </div>
 
-                  <div className="px-6 py-3 bg-zinc-50 border-t border-zinc-100 flex justify-between items-center text-xs">
+                  <div className="px-6 py-3 bg-zinc-50 border-t border-zinc-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs">
+                    <button 
+                      onClick={() => setAuditModalCamp(camp)}
+                      className="font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <FileText className="w-3.5 h-3.5" /> Play Console Answers & Audit
+                    </button>
                     <button 
                       onClick={() => setSelectedCampaign(camp)}
                       className="font-bold text-blue-600 hover:underline cursor-pointer"
                     >
                       Audit Details &rarr;
                     </button>
-                    {camp.playStoreUrl && (
-                      <a href={camp.playStoreUrl} target="_blank" rel="noreferrer" className="text-zinc-400 hover:text-zinc-600">
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </a>
-                    )}
                   </div>
                 </div>
               ))}
             </div>
+          )}
+
+          {/* TELEMETRY PRODUCTION AUDIT MODAL */}
+          {auditModalCamp && (
+            <TelemetryAuditModal
+              isOpen={!!auditModalCamp}
+              onClose={() => setAuditModalCamp(null)}
+              campaign={{
+                id: String(auditModalCamp.id),
+                title: auditModalCamp.name,
+                packageName: auditModalCamp.package,
+                testersCount: 20,
+                daysCount: auditModalCamp.totalDays || 14,
+                status: auditModalCamp.status
+              }}
+            />
           )}
 
           {/* LAUNCH CAMPAIGN MODAL WITH COIN VALIDATION */}

@@ -20,7 +20,8 @@ import {
   X,
   CreditCard,
   Flame,
-  HelpCircle
+  HelpCircle,
+  Trophy
 } from 'lucide-react';
 
 import { db } from '@/lib/firebase';
@@ -89,6 +90,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
       title: '🎮 EARN BY TESTING',
       items: [
         { name: 'Explore Apps to Test', href: '/tester/tests', icon: CheckSquare, badge: 'Earn Coins' },
+        { name: 'Tester Leaderboard', href: '/tester/leaderboard', icon: Trophy, badge: 'Top 10' },
       ],
     },
     {
